@@ -26,3 +26,37 @@ Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports
 > Note: There is a known issue with the Microsoft authentication process that may result in an error message during the initial authentication process. If this occurs, re-run the script and the error will no longer show.
 5. The script will run and the results will be written to a text file in the directory in which it was run. .\RubrikMS365Sizing.txt
 
+## Example Output
+
+```
+    Exchange
+    
+    Name                           Value
+    ----                           -----
+    AverageGrowthPercentage        0.16
+    SizePerUserGB                  0.01
+    NumberOfUsers                  12
+    TotalSizeGB                    0.16
+    ==========================================================================
+    
+    OneDrive
+    
+    Name                           Value
+    ----                           -----
+    AverageGrowthPercentage        446.78
+    SizePerUserGB                  3.2
+    NumberOfUsers                  6
+    TotalSizeGB                    19.22
+    
+    ==========================================================================
+    
+    Sharepoint
+    
+    Name                           Value
+    ----                           -----
+    AverageGrowthPercentage        11.23
+    NumberOfSites                  18
+    SizePerUserGB                  1.07
+    TotalSizeGB                    19.33
+    ==========================================================================
+ ```
