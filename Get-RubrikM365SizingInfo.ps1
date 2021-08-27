@@ -147,8 +147,8 @@ function ProcessUsageReport {
     $M365Sizing.$($Section).SizePerUserGB = [math]::Round((($SummarizedData.Average) / 1GB), 2)
 }
 
-
 Connect-MgGraph -Scopes @("Reports.Read.All")
+
 
 $M365Sizing = [ordered]@{
     Exchange = [ordered]@{
@@ -156,18 +156,24 @@ $M365Sizing = [ordered]@{
         TotalSizeGB   = 0
         SizePerUserGB = 0
         AverageGrowthPercentage = 0
+        OneYearStorageForecastInGB = 0
+        ThreeYearStorageForecastInGB = 0
     }
     OneDrive = [ordered]@{
         NumberOfUsers = 0
         TotalSizeGB   = 0
         SizePerUserGB = 0
         AverageGrowthPercentage = 0
+        OneYearStorageForecastInGB = 0
+        ThreeYearStorageForecastInGB = 0
     }
     Sharepoint = [ordered]@{
         NumberOfSites = 0
         TotalSizeGB   = 0
         SizePerUserGB = 0
         AverageGrowthPercentage = 0
+        OneYearStorageForecastInGB = 0
+        ThreeYearStorageForecastInGB = 0
     }
     Licensing = [ordered]@{
         # Commented out for now, but we can get the number of licensed users if required (Not just activated).
@@ -175,6 +181,10 @@ $M365Sizing = [ordered]@{
         # OneDrive         = 0
         # SharePoint       = 0
         # Teams            = 0
+    }
+    TotalRubrikStorageNeeded = [ordered]@{
+        OneYearInGB = 0
+        ThreeYearInGB   = 0
     }
     # Skype = @{
     #     NumberOfUsers = 0
@@ -212,6 +222,7 @@ foreach($Section in $UsageDetailReports.Keys){
 Remove-Item -Path $ReportCSV
 #endregion
 
+
 #region Storage Usage Reports
 # Run Storage Usage Reports for each section get get a trend of storage used for the period provided. We will get the growth percentage
 # for each day and then average them all across the period provided. This way we can take into account the growth or the reduction 
@@ -228,15 +239,21 @@ foreach($Section in $StorageUsageReports.Keys){
 }
 #endregion
 
+
+
 #region License usage
 $licenseReportPath = Get-MgReport -ReportName getOffice365ActiveUserDetail -Period 180
 $licenseReport = Import-Csv -Path $licenseReportPath | Where-Object 'is deleted' -eq 'FALSE'
 
+
 # Clean up temp CSV
 Remove-Item -Path $licenseReportPath
 
+$licensesToIgnore = "POWER APPS PER USER PLAN","DYNAMICS 365 REMOTE ASSIST","POWER AUTOMATE PER USER PLAN","BUSINESS APPS (FREE)","MICROSOFT BUSINESS CENTER","DYNAMICS 365 GUIDES","POWERAPPS PER APP BASELINE","MICROSOFT MYANALYTICS","MICROSOFT 365 PHONE SYSTEM","POWER BI PRO","AZURE ACTIVE DIRECTORY PREMIUM","MICROSOFT INTUNE","DYNAMICS 365 TEAM MEMBERS","SECURITY E3","ENTERPRISE MOBILITY","MICROSOFT WORKPLACE ANALYTICS","MICROSOFT POWER AUTOMATE FREE","MICROSOFT TEAMS EXPLORATORY","MICROSOFT STREAM TRIAL", "VISIO PLAN 2","MICROSOFT POWER APPS PLAN 2 TRIAL","DYNAMICS 365 CUSTOMER ENGAGEMENT PLAN","DYNAMICS 365 BUSINESS CENTRAL ESSENTIAL","PROJECT PLAN","DYNAMICS 365 BUSINESS CENTRAL FOR IWS","PROJECT ONLINE ESSENTIALS","MICROSOFT TEAMS TRIAL","POWERAPPS AND LOGIC FLOWS","DYNAMICS 365 CUSTOMER VOICE TRIAL","MICROSOFT DEFENDER FOR ENDPOINT","DYNAMICS 365 SALES PREMIUM VIRAL TRIAL","DYNAMICS 365 P1 TRIAL FOR INFORMATION WORKERS","POWER BI (FREE)",""
+
 $assignedProducts = $licenseReport | ForEach-Object {$_.'Assigned Products'.Split('+')} | Group-Object | Select-Object Name,Count
-$assignedProducts | ForEach-Object {$M365Sizing.Licensing.Add($_.name, $_.count)}
+
+$assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365Sizing.Licensing.Add($_.name, $_.count)}}
 
 # We can add these back in if we want total licensed users for each feature.
 # $M365Sizing.Licensing.Exchange   = ($licenseReport | Where-Object 'Has Exchange License' -eq 'True' | measure-object).Count
@@ -245,12 +262,23 @@ $assignedProducts | ForEach-Object {$M365Sizing.Licensing.Add($_.name, $_.count)
 # $M365Sizing.Licensing.Teams      = ($licenseReport | Where-Object 'Has Teams License' -eq 'True' | measure-object).Count
 #endregion
 
+
+
 Disconnect-MgGraph
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
+
+    $M365Sizing.$($Section).OneYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 1))
+    $M365Sizing.$($Section).ThreeYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 3))
+    
+    $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB = $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB + $M365Sizing.$($Section).OneYearStorageForecastInGB
+    $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB = $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB + $M365Sizing.$($Section).ThreeYearStorageForecastInGB
+
     Write-Output $Section | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
     Write-Output $M365Sizing.$($Section) |Format-Table -AutoSize | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
     Write-Output "==========================================================================" | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
 }
+
+
 
 Write-Output "`n`nM365 Sizing information has been written to $((Get-ChildItem RubrikMS365Sizing.txt).FullName)`n`n"
 if ($OutputObject) {
