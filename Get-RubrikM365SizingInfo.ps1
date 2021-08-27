@@ -267,11 +267,16 @@ $assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365
 Disconnect-MgGraph
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 
-    $M365Sizing.$($Section).OneYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 1))
-    $M365Sizing.$($Section).ThreeYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 3))
+    if ( $Section -NotIn @("Licensing", "TotalRubrikStorageNeeded") )
+    {
+        $M365Sizing.$($Section).OneYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 1))
+        $M365Sizing.$($Section).ThreeYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 3))
     
-    $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB = $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB + $M365Sizing.$($Section).OneYearStorageForecastInGB
-    $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB = $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB + $M365Sizing.$($Section).ThreeYearStorageForecastInGB
+        $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB = $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB + $M365Sizing.$($Section).OneYearStorageForecastInGB
+        $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB = $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB + $M365Sizing.$($Section).ThreeYearStorageForecastInGB
+    }
+
+    
 
     Write-Output $Section | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
     Write-Output $M365Sizing.$($Section) |Format-Table -AutoSize | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
