@@ -34,34 +34,55 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ## Example Output
 
 ```
-    Exchange
-    
-    Name                           Value
-    ----                           -----
-    AverageGrowthPercentage        0.16
-    SizePerUserGB                  0.01
-    NumberOfUsers                  12
-    TotalSizeGB                    0.16
-    ==========================================================================
-    
-    OneDrive
-    
-    Name                           Value
-    ----                           -----
-    AverageGrowthPercentage        446.78
-    SizePerUserGB                  3.2
-    NumberOfUsers                  6
-    TotalSizeGB                    19.22
-    
-    ==========================================================================
-    
-    Sharepoint
-    
-    Name                           Value
-    ----                           -----
-    AverageGrowthPercentage        11.23
-    NumberOfSites                  18
-    SizePerUserGB                  1.07
-    TotalSizeGB                    19.33
-    ==========================================================================
- ```
+Exchange
+
+Name                         Value
+----                         -----
+NumberOfUsers                296
+TotalSizeGB                  1.26
+SizePerUserGB                0
+AverageGrowthPercentage      8
+OneYearStorageForecastInGB   1.3608
+ThreeYearStorageForecastInGB 1.5624
+
+==========================================================================
+OneDrive
+
+Name                         Value
+----                         -----
+NumberOfUsers                308
+TotalSizeGB                  3139.39
+SizePerUserGB                10.19
+AverageGrowthPercentage      912
+OneYearStorageForecastInGB   31770.6268
+ThreeYearStorageForecastInGB 89033.1004
+
+==========================================================================
+Sharepoint
+
+Name                         Value
+----                         -----
+NumberOfSites                17
+TotalSizeGB                  4.24
+SizePerUserGB                0.25
+AverageGrowthPercentage      15
+OneYearStorageForecastInGB   4.876
+ThreeYearStorageForecastInGB 6.148
+
+==========================================================================
+Licensing
+
+Name                         Value
+----                         -----
+MICROSOFT 365 BUSINESS BASIC 296
+
+==========================================================================
+TotalRubrikStorageNeeded
+
+Name          Value
+----          -----
+OneYearInGB   31776.8636
+ThreeYearInGB 89040.8108
+
+==========================================================================
+```
