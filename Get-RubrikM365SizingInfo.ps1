@@ -168,7 +168,7 @@ function ProcessUsageReport {
     $M365Sizing.$($Section).SizePerUserGB = [math]::Round((($SummarizedData.Average) / 1GB), 2)
 }
 
-Connect-MgGraph -Scopes @("Reports.Read.All")
+Connect-MgGraph -Scopes @( )
 
 
 $M365Sizing = [ordered]@{
