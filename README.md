@@ -19,6 +19,10 @@ Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports
 1. Open a PowerShell terminal and navigate to the folder/directory where you previously downloaded the [Get-RubrikM365SizingInfo.ps1](https://github.com/rubrikinc/microsoft-365-sizing/blob/main/Get-RubrikM365SizingInfo.ps1) file.
 2. Run the script.
 
+```
+./Get-RubrikM365SizingInfo.ps1
+```
+
 
 > NOTE - If you receive a PowerShell execution policy error message you can run the following command:
 
@@ -26,10 +30,17 @@ Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-3. Authenticate and acknowledge report access permissions in the browser window/tab that appears.
+3. Authenticate and acknowledge report access permissions in the browser window/tab that appears. The script requires an account with `Reports.Read.All` permissions.
 
 > Note: There is a known issue with the Microsoft authentication process that may result in an error message during the initial authentication process. If this occurs, re-run the script and the error will no longer show.
-5. The script will run and the results will be written to a text file in the directory in which it was run. .\RubrikMS365Sizing.txt
+
+
+
+5. The script will run and the results will be written to a text file in the directory in which it was run. 
+
+```
+.\RubrikMS365Sizing.txt
+```
 
 ## Example Output
 

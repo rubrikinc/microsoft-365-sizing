@@ -108,6 +108,13 @@ function Get-MgReport {
             "$systemTempFolder\$ReportName.csv"
         }
         catch {
+
+            $errorMessage = $_.Exception | Out-String
+            
+            if($errorMessage.Contains('Response status code does not indicate success: Forbidden (Forbidden)')) {
+                throw "This script requires that you authenticate using an account with 'Reports.Read.All' permissions."
+            } 
+            
             throw $_.Exception
         }
         
