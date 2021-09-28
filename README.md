@@ -5,13 +5,31 @@
 * `PowerShell >= 5.1` for PowerShell Gallery.
 * User with MS Graph API access.
 
+```
+PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
+[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions.
+[INFO] Retrieving Usage Details for Exchange.
+[INFO] Retrieving Usage Details for Sharepoint.                                                                           
+[INFO] Retrieving Usage Details for OneDrive.                                                                             
+[INFO] Retrieving Storage Usage for Exchange.                                                                             
+[INFO] Retrieving Storage Usage for Sharepoint.                                                                           
+[INFO] Retrieving Storage Usage for OneDrive.                                                                             
+[INFO] Retrieving the subscription License details.                                                                       
+[INFO] Disconnecting from the Microsoft Graph API.                                                                        
+[INFO] Connecting to the Microsoft Exchange Online Module.                                                                
+[INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information.                                                                                                                                                            
+[INFO] Disconnecting from the Microsoft Exchange Online Module    
+
+M365 Sizing information has been written to /microsoft-365-sizing/RubrikMS365Sizing.txt   
+```
+
 ## Installation
 
 1. Download the [Get-RubrikM365SizingInfo.ps1](https://github.com/rubrikinc/microsoft-365-sizing/blob/main/Get-RubrikM365SizingInfo.ps1) file to your local machine
-2. Install the `Microsoft.Graph.Authenication` and `Microsoft.Graph.Reports` PowerShell module from the PowerShell Gallery
+2. Install the `Microsoft.Graph.Authentication`, `Microsoft.Graph.Reports` and `ExchangeOnlineManagement` modules from the PowerShell Gallery
 
 ```powershell
-Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports
+Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports, ExchangeOnlineManagement
 ```
 
 ## Usage
@@ -30,13 +48,15 @@ Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-3. Authenticate and acknowledge report access permissions in the browser window/tab that appears. The script requires an account with `Reports.Read.All` permissions.
+3. Authenticate and acknowledge report access permissions in the browser window/tab that appears. This will occur twice during the script execution.
 
 > Note: There is a known issue with the Microsoft authentication process that may result in an error message during the initial authentication process. If this occurs, re-run the script and the error will no longer show.
 
 
 
 5. The script will run and the results will be written to a text file in the directory in which it was run. 
+
+
 
 ```
 .\RubrikMS365Sizing.txt

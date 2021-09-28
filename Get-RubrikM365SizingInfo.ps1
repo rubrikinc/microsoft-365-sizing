@@ -175,7 +175,8 @@ function ProcessUsageReport {
     $M365Sizing.$($Section).SizePerUserGB = [math]::Round((($SummarizedData.Average) / 1GB), 2)
 }
 
-Connect-MgGraph -Scopes @( )
+Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions."
+Connect-MgGraph -Scopes "Reports.Read.All"  | Out-Null
 
 
 $M365Sizing = [ordered]@{
@@ -243,7 +244,9 @@ $UsageDetailReports = @{}
 $UsageDetailReports.Add('Exchange', 'getMailboxUsageDetail')
 $UsageDetailReports.Add('OneDrive', 'getOneDriveUsageAccountDetail')
 $UsageDetailReports.Add('Sharepoint', 'getSharePointSiteUsageDetail')
+
 foreach($Section in $UsageDetailReports.Keys){
+    Write-Output "[INFO] Retrieving Usage Details for $section."
     $ReportCSV = Get-MgReport -ReportName $UsageDetailReports[$Section] -Period $Period
     ProcessUsageReport -ReportCSV $ReportCSV -ReportName $UsageDetailReports[$Section] -Section $Section
 }
@@ -260,6 +263,7 @@ $StorageUsageReports.Add('Exchange', 'getMailboxUsageStorage')
 $StorageUsageReports.Add('OneDrive', 'getOneDriveUsageStorage')
 $StorageUsageReports.Add('Sharepoint', 'getSharePointSiteUsageStorage')
 foreach($Section in $StorageUsageReports.Keys){
+    Write-Output "[INFO] Retrieving Storage Usage for $section."
     $ReportCSV = Get-MgReport -ReportName $StorageUsageReports[$Section] -Period $Period
     $AverageGrowth = Measure-AverageGrowth -ReportCSV $ReportCSV -ReportName $StorageUsageReports[$Section]
     $M365Sizing.$($Section).AverageGrowthPercentage = [math]::Round($AverageGrowth,2)
@@ -270,6 +274,7 @@ foreach($Section in $StorageUsageReports.Keys){
 
 
 #region License usage
+Write-Output "[INFO] Retrieving the subscription License details."
 $licenseReportPath = Get-MgReport -ReportName getOffice365ActiveUserDetail -Period 180
 $licenseReport = Import-Csv -Path $licenseReportPath | Where-Object 'is deleted' -eq 'FALSE'
 
@@ -291,8 +296,33 @@ $assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365
 #endregion
 
 
-
+Write-Output "[INFO] Disconnecting from the Microsoft Graph API."
 Disconnect-MgGraph
+
+# The Microsoft Exchange Reports do not contain In-Place Archive sizing information so we also need to connect to the Exchange Online module to
+# get this information
+Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module."
+Connect-ExchangeOnline -ShowBanner:$false
+Write-Output "[INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information."
+$ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| select name,FolderAndSubfolderSize
+
+$ArchiveMailboxSizeGb = 0
+foreach($Folder in $ArchiveMailboxes){
+    $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
+    $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+    
+    $FolderSizeInGb = [math]::Round(([int]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+    
+    $ArchiveMailboxSizeGb += $FolderSizeInGb
+}
+
+$M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
+
+
+Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
+Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore
+
+
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 
     if ( $Section -NotIn @("Licensing", "TotalRubrikStorageNeeded") )
