@@ -311,10 +311,11 @@ foreach($Folder in $ArchiveMailboxes){
     $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
     $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
     
-    $FolderSizeInGb = [math]::Round(([int]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+    $FolderSizeInGb = [math]::Round(($FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
     
     $ArchiveMailboxSizeGb += $FolderSizeInGb
 }
+
 
 $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
 
