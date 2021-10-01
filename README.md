@@ -14,9 +14,10 @@ PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
 [INFO] Disconnecting from the Microsoft Graph API.                                                                        
 [INFO] Connecting to the Microsoft Exchange Online Module.                                                                
 [INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information.                                                                                                                                                            
-[INFO] Disconnecting from the Microsoft Exchange Online Module    
+[INFO] Disconnecting from the Microsoft Exchange Online Module
+[INFO] Calculating the forecasted total storage need for Rubrik.     
 
-M365 Sizing information has been written to /microsoft-365-sizing/RubrikMS365Sizing.txt   
+M365 Sizing information has been written to ~/Development/microsoft-365-sizing/RubrikMS365Sizing.txt   
 ```
 
 ## Requirements
