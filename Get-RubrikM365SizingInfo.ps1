@@ -321,9 +321,9 @@ $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
 
 
 Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
-Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore
+Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
 
-
+Write-Output "[INFO] Calculating the forecasted total storage need for Rubrik."
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 
     if ( $Section -NotIn @("Licensing", "TotalRubrikStorageNeeded") )
