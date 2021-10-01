@@ -87,6 +87,7 @@ param (
 
 # Provide OS agnostic temp folder path for raw reports
 $systemTempFolder = [System.IO.Path]::GetTempPath()
+$ProgressPreference = 'SilentlyContinue'
 
 function Get-MgReport {
     [CmdletBinding()]
