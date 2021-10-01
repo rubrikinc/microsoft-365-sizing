@@ -311,8 +311,8 @@ foreach($Folder in $ArchiveMailboxes){
     $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
     $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
     
-    $FolderSizeInGb = [math]::Round(($FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
-    
+    $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+
     $ArchiveMailboxSizeGb += $FolderSizeInGb
 }
 
@@ -348,4 +348,3 @@ Write-Output "`n`nM365 Sizing information has been written to $((Get-ChildItem R
 if ($OutputObject) {
     return $M365Sizing
 }
- 
