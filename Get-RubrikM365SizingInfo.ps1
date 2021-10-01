@@ -40,7 +40,7 @@
     ThreeYearStorageForecastInGB 89033.1004
 
     ==========================================================================
-    Sharepoint
+    SharePoint
 
     Name                         Value
     ----                         -----
@@ -59,7 +59,7 @@
     MICROSOFT 365 BUSINESS BASIC 296
 
     ==========================================================================
-    TotalRubrikStorageNeeded
+    TotalDataToProtect
 
     Name          Value
     ----          -----
@@ -169,7 +169,7 @@ function ProcessUsageReport {
     $ReportDetail = Import-Csv -Path $ReportCSV | Where-Object {$_.'Is Deleted' -eq 'FALSE'}
     $SummarizedData = $ReportDetail | Measure-Object -Property 'Storage Used (Byte)' -Sum -Average
     switch ($Section) {
-        'Sharepoint' { $M365Sizing.$($Section).NumberOfSites = $SummarizedData.Count }
+        'SharePoint' { $M365Sizing.$($Section).NumberOfSites = $SummarizedData.Count }
         Default {$M365Sizing.$($Section).NumberOfUsers = $SummarizedData.Count}
     }
     $M365Sizing.$($Section).TotalSizeGB = [math]::Round(($SummarizedData.Sum / 1GB), 2, [MidPointRounding]::AwayFromZero)
@@ -197,7 +197,7 @@ $M365Sizing = [ordered]@{
         OneYearStorageForecastInGB = 0
         ThreeYearStorageForecastInGB = 0
     }
-    Sharepoint = [ordered]@{
+    SharePoint = [ordered]@{
         NumberOfSites = 0
         TotalSizeGB   = 0
         SizePerUserGB = 0
@@ -212,7 +212,7 @@ $M365Sizing = [ordered]@{
         # SharePoint       = 0
         # Teams            = 0
     }
-    TotalRubrikStorageNeeded = [ordered]@{
+    TotalDataToProtect = [ordered]@{
         OneYearInGB = 0
         ThreeYearInGB   = 0
     }
@@ -244,7 +244,7 @@ $M365Sizing = [ordered]@{
 $UsageDetailReports = @{}
 $UsageDetailReports.Add('Exchange', 'getMailboxUsageDetail')
 $UsageDetailReports.Add('OneDrive', 'getOneDriveUsageAccountDetail')
-$UsageDetailReports.Add('Sharepoint', 'getSharePointSiteUsageDetail')
+$UsageDetailReports.Add('SharePoint', 'getSharePointSiteUsageDetail')
 
 foreach($Section in $UsageDetailReports.Keys){
     Write-Output "[INFO] Retrieving Usage Details for $section."
@@ -262,7 +262,7 @@ Remove-Item -Path $ReportCSV
 $StorageUsageReports = @{}
 $StorageUsageReports.Add('Exchange', 'getMailboxUsageStorage')
 $StorageUsageReports.Add('OneDrive', 'getOneDriveUsageStorage')
-$StorageUsageReports.Add('Sharepoint', 'getSharePointSiteUsageStorage')
+$StorageUsageReports.Add('SharePoint', 'getSharePointSiteUsageStorage')
 foreach($Section in $StorageUsageReports.Keys){
     Write-Output "[INFO] Retrieving Storage Usage for $section."
     $ReportCSV = Get-MgReport -ReportName $StorageUsageReports[$Section] -Period $Period
@@ -292,7 +292,7 @@ $assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365
 # We can add these back in if we want total licensed users for each feature.
 # $M365Sizing.Licensing.Exchange   = ($licenseReport | Where-Object 'Has Exchange License' -eq 'True' | measure-object).Count
 # $M365Sizing.Licensing.OneDrive   = ($licenseReport | Where-Object 'Has OneDrive License' -eq 'True' | measure-object).Count
-# $M365Sizing.Licensing.SharePoint = ($licenseReport | Where-Object 'Has Sharepoint License' -eq 'True' | measure-object).Count
+# $M365Sizing.Licensing.SharePoint = ($licenseReport | Where-Object 'Has SharePoint License' -eq 'True' | measure-object).Count
 # $M365Sizing.Licensing.Teams      = ($licenseReport | Where-Object 'Has Teams License' -eq 'True' | measure-object).Count
 #endregion
 
@@ -327,13 +327,13 @@ Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction
 Write-Output "[INFO] Calculating the forecasted total storage need for Rubrik."
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 
-    if ( $Section -NotIn @("Licensing", "TotalRubrikStorageNeeded") )
+    if ( $Section -NotIn @("Licensing", "TotalDataToProtect") )
     {
         $M365Sizing.$($Section).OneYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 1))
         $M365Sizing.$($Section).ThreeYearStorageForecastInGB = $M365Sizing.$($Section).TotalSizeGB * (1.0 + (($M365Sizing.$($Section).AverageGrowthPercentage / 100) * 3))
     
-        $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB = $M365Sizing.TotalRubrikStorageNeeded.OneYearInGB + $M365Sizing.$($Section).OneYearStorageForecastInGB
-        $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB = $M365Sizing.TotalRubrikStorageNeeded.ThreeYearInGB + $M365Sizing.$($Section).ThreeYearStorageForecastInGB
+        $M365Sizing.TotalDataToProtect.OneYearInGB = $M365Sizing.TotalDataToProtect.OneYearInGB + $M365Sizing.$($Section).OneYearStorageForecastInGB
+        $M365Sizing.TotalDataToProtect.ThreeYearInGB = $M365Sizing.TotalDataToProtect.ThreeYearInGB + $M365Sizing.$($Section).ThreeYearStorageForecastInGB
     }
 
     

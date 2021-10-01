@@ -107,7 +107,7 @@ Name                         Value
 MICROSOFT 365 BUSINESS BASIC 296
 
 ==========================================================================
-TotalRubrikStorageNeeded
+TotalDataToProtect
 
 Name          Value
 ----          -----
