@@ -55,7 +55,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 > Note: There is a known issue with the Microsoft authentication process that may result in an error message during the initial authentication process. If this occurs, re-run the script and the error will no longer show.
 
-4. The script will run and the results will be written to a text file in the directory in which it was run.
+4. The script will run and the results will be written to a html file in the directory in which it was run.
 
 ```
 .\RubrikMS365Sizing.txt
@@ -63,56 +63,4 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 ## Example Output
 
-```
-Exchange
-
-Name                         Value
-----                         -----
-NumberOfUsers                296
-TotalSizeGB                  1.26
-SizePerUserGB                0
-AverageGrowthPercentage      8
-OneYearStorageForecastInGB   1.3608
-ThreeYearStorageForecastInGB 1.5624
-
-==========================================================================
-OneDrive
-
-Name                         Value
-----                         -----
-NumberOfUsers                308
-TotalSizeGB                  3139.39
-SizePerUserGB                10.19
-AverageGrowthPercentage      912
-OneYearStorageForecastInGB   31770.6268
-ThreeYearStorageForecastInGB 89033.1004
-
-==========================================================================
-Sharepoint
-
-Name                         Value
-----                         -----
-NumberOfSites                17
-TotalSizeGB                  4.24
-SizePerUserGB                0.25
-AverageGrowthPercentage      15
-OneYearStorageForecastInGB   4.876
-ThreeYearStorageForecastInGB 6.148
-
-==========================================================================
-Licensing
-
-Name                         Value
-----                         -----
-MICROSOFT 365 BUSINESS BASIC 296
-
-==========================================================================
-TotalDataToProtect
-
-Name          Value
-----          -----
-OneYearInGB   31776.8636
-ThreeYearInGB 89040.8108
-
-==========================================================================
-```
+![Rubrik Sizing HTML Output](https://user-images.githubusercontent.com/8610203/135927453-14334d14-886b-4000-b749-93934d341bd9.png)
