@@ -15,65 +15,12 @@
 .INPUTS
     Inputs (if any)
 .OUTPUTS
-    RubrikM365Sizing.txt containing the below data. 
-    Exchange
-
-    Name                         Value
-    ----                         -----
-    NumberOfUsers                296
-    TotalSizeGB                  1.26
-    SizePerUserGB                0
-    AverageGrowthPercentage      8
-    OneYearStorageForecastInGB   1.3608
-    ThreeYearStorageForecastInGB 1.5624
-
-    ==========================================================================
-    OneDrive
-
-    Name                         Value
-    ----                         -----
-    NumberOfUsers                308
-    TotalSizeGB                  3139.39
-    SizePerUserGB                10.19
-    AverageGrowthPercentage      912
-    OneYearStorageForecastInGB   31770.6268
-    ThreeYearStorageForecastInGB 89033.1004
-
-    ==========================================================================
-    SharePoint
-
-    Name                         Value
-    ----                         -----
-    NumberOfSites                17
-    TotalSizeGB                  4.24
-    SizePerUserGB                0.25
-    AverageGrowthPercentage      15
-    OneYearStorageForecastInGB   4.876
-    ThreeYearStorageForecastInGB 6.148
-
-    ==========================================================================
-    Licensing
-
-    Name                         Value
-    ----                         -----
-    MICROSOFT 365 BUSINESS BASIC 296
-
-    ==========================================================================
-    TotalDataToProtect
-
-    Name          Value
-    ----          -----
-    OneYearInGB   31776.8636
-    ThreeYearInGB 89040.8108
-
-    ==========================================================================
-
-    We will also output an object with the above information that can be used for further integration.
+    Rubrik-M365-Sizing.html. 
 .NOTES
     Author:         Chris Lumnah
     Created Date:   6/17/2021
 #>
-#Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Reports
+
 [CmdletBinding()]
 param (
     [Parameter()]
@@ -176,6 +123,28 @@ function ProcessUsageReport {
     $M365Sizing.$($Section).SizePerUserGB = [math]::Round((($SummarizedData.Average) / 1GB), 2)
 }
 
+# Validate the required 'Microsoft.Graph.Reports' is installed
+# and provide a user friendly message when it's not.
+if (Get-Module -ListAvailable -Name Microsoft.Graph.Reports)
+{
+    
+}
+else
+{
+    throw "The 'Microsoft.Graph.Reports' is required for this script. Run the follow command to install: Install-Module Microsoft.Graph.Reports"
+}
+
+# Validate the required 'ExchangeOnlineManagement' is installed
+# and provide a user friendly message when it's not.
+if (Get-Module -ListAvailable -Name ExchangeOnlineManagement)
+{
+    
+}
+else
+{
+    throw "The 'ExchangeOnlineManagement' is required for this script. Run the follow command to install: Install-Module ExchangeOnlineManagement"
+}
+
 Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions."
 Connect-MgGraph -Scopes "Reports.Read.All"  | Out-Null
 
@@ -216,18 +185,7 @@ $M365Sizing = [ordered]@{
         OneYearInGB = 0
         ThreeYearInGB   = 0
     }
-    # Skype = @{
-    #     NumberOfUsers = 0
-    #     TotalSizeGB = 0
-    #     SizePerUserGB = 0
-    #     AverageGrowthPercentage = 0
-    # }
-    # Yammer = @{
-    #     NumberOfUsers = 0
-    #     TotalSizeGB = 0
-    #     SizePerUserGB = 0
-    #     AverageGrowthPercentage = 0
-    # }
+
     # Teams = @{
     #     NumberOfUsers = 0
     #     TotalSizeGB = 0
@@ -288,14 +246,6 @@ $licensesToIgnore = "POWER APPS PER USER PLAN","DYNAMICS 365 REMOTE ASSIST","POW
 $assignedProducts = $licenseReport | ForEach-Object {$_.'Assigned Products'.Split('+')} | Group-Object | Select-Object Name,Count
 
 $assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365Sizing.Licensing.Add($_.name, $_.count)}}
-
-# We can add these back in if we want total licensed users for each feature.
-# $M365Sizing.Licensing.Exchange   = ($licenseReport | Where-Object 'Has Exchange License' -eq 'True' | measure-object).Count
-# $M365Sizing.Licensing.OneDrive   = ($licenseReport | Where-Object 'Has OneDrive License' -eq 'True' | measure-object).Count
-# $M365Sizing.Licensing.SharePoint = ($licenseReport | Where-Object 'Has SharePoint License' -eq 'True' | measure-object).Count
-# $M365Sizing.Licensing.Teams      = ($licenseReport | Where-Object 'Has Teams License' -eq 'True' | measure-object).Count
-#endregion
-
 
 Write-Output "[INFO] Disconnecting from the Microsoft Graph API."
 Disconnect-MgGraph
