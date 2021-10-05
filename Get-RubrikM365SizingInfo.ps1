@@ -713,7 +713,7 @@ $HTML_CODE=@"
                         <th>Number of Users</th>
                         <th>Total Size</th>
                         <th>Per User Size</th>
-                        <th>Average Growth (Yearly)</th>
+                        <th>Average Growth Forecast (Yearly)</th>
                         <th>One Year Storage Forecast</th>
                         <th>Three Year Storage Forecast</th>
                     </tr>
@@ -768,7 +768,7 @@ $HTML_CODE=@"
                         <th>Number of Users</th>
                         <th>Total Size</th>
                         <th>Per User Size</th>
-                        <th>Average Growth (Yearly)</th>
+                        <th>Average Growth Forecast (Yearly)</th>
                         <th>One Year Storage Forecast</th>
                         <th>Three Year Storage Forecast</th>
                     </tr>
@@ -835,10 +835,10 @@ $HTML_CODE=@"
             <table class="styled-table">
                 <thead>
                     <tr>
-                        <th>Number of Site</th>
+                        <th>Number of Sites</th>
                         <th>Total Size</th>
                         <th>Per Site Size</th>
-                        <th>Average Growth</th>
+                        <th>Average Growth Forecast (Yearly)</th>
                         <th>One Year Storage Forecast</th>
                         <th>Three Year Storage Forecast</th>
                     </tr>
@@ -869,7 +869,7 @@ $HTML_CODE=@"
                         <th>Number of Users</th>
                         <th>Total Size (GB)</th>
                         <th>Per User Size (GB)</th>
-                        <th>Average Growth</th>
+                        <th>Average Growth Forecast (Yearly)</th>
                         <th>One Year Storage Forecast (GB)</th>
                         <th>Three Year Storage Forecast (GB)</th>
                     </tr>
