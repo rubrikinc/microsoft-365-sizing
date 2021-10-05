@@ -17,7 +17,7 @@ PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
 [INFO] Disconnecting from the Microsoft Exchange Online Module
 [INFO] Calculating the forecasted total storage need for Rubrik.     
 
-M365 Sizing information has been written to ~/Development/microsoft-365-sizing/RubrikMS365Sizing.txt   
+M365 Sizing information has been written to ~/Development/microsoft-365-sizing/Rubrik-MS365-Sizing.html   
 ```
 
 ## Requirements
@@ -29,10 +29,10 @@ M365 Sizing information has been written to ~/Development/microsoft-365-sizing/R
 ## Installation
 
 1. Download the [Get-RubrikM365SizingInfo.ps1](https://github.com/rubrikinc/microsoft-365-sizing/blob/main/Get-RubrikM365SizingInfo.ps1) file to your local machine
-2. Install the `Microsoft.Graph.Authentication`, `Microsoft.Graph.Reports` and `ExchangeOnlineManagement` modules from the PowerShell Gallery
+2. Install the `Microsoft.Graph.Reports` and `ExchangeOnlineManagement` modules from the PowerShell Gallery
 
 ```powershell
-Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Reports, ExchangeOnlineManagement
+Install-Module Microsoft.Graph.Reports, ExchangeOnlineManagement
 ```
 
 ## Usage
