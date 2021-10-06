@@ -13,7 +13,8 @@ PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
 [INFO] Retrieving the subscription License details.                                                                       
 [INFO] Disconnecting from the Microsoft Graph API.                                                                        
 [INFO] Connecting to the Microsoft Exchange Online Module.                                                                
-[INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information.                                                                                                                                                            
+[INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information.
+[INFO] Retrieving Exchange Mailbox Shared Mailbox information.                                                                                                                                                        
 [INFO] Disconnecting from the Microsoft Exchange Online Module
 [INFO] Calculating the forecasted total storage need for Rubrik.     
 
