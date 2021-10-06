@@ -254,8 +254,9 @@ Disconnect-MgGraph
 # get this information
 Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module."
 Connect-ExchangeOnline -ShowBanner:$false
-Write-Output "[INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information."
+Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing information."
 $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| select name,FolderAndSubfolderSize
+$SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited | Get-ExoMailboxStatistics| select TotalItemSize
 
 $ArchiveMailboxSizeGb = 0
 foreach($Folder in $ArchiveMailboxes){
@@ -267,9 +268,19 @@ foreach($Folder in $ArchiveMailboxes){
     $ArchiveMailboxSizeGb += $FolderSizeInGb
 }
 
+Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox information."
+$SharedMailboxesSizeGb = 0
+foreach($Folder in $SharedMailboxes){
+    $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
+    $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+    
+    $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+
+    $SharedMailboxesSizeGb += $FolderSizeInGb
+}
 
 $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
-
+$M365Sizing.Exchange.TotalSizeGB += $SharedMailboxesSizeGb
 
 Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
 Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
@@ -293,7 +304,19 @@ foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
     Write-Output "==========================================================================" | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
 }
 
+# Calculate the total number of licenses required
+if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
+    $UserLicensesRequired = $M365Sizing.Exchange.NumberOfUsers
+} else {
+    $UserLicensesRequired = $M365Sizing.OneDrive.NumberOfUsers
+}
 
+# Account for a large number of Shared Mailboxes
+if ($SharedMailboxes.count -gt $UserLicensesRequired){
+    $UserLicensesRequired = $SharedMailboxes.count
+}
+
+#region HTML Code for Output
 $HTML_CODE=@"                            
 <!DOCTYPE html>
 <html>
@@ -1179,13 +1202,16 @@ $HTML_CODE=@"
             <table class="styled-table">
                 <thead>
                     <tr>
+                        <th>Required Number of Licenses</th>
                         <th>One Year Storage Forecast</th>
                         <th>Three Year Storage Forecast</th>
+                        
 
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
+                        <td>$UserLicensesRequired</td>
                         <td>$($M365Sizing[4].OneYearInGB) GB</td>
                         <td>$($M365Sizing[4].ThreeYearInGB) GB</td>
                  
@@ -1213,12 +1239,13 @@ $HTML_CODE=@"
 
 </html>             
 "@
+#endregion
 # Remove any previously created files
 Remove-Item -Path .\Rubrik-M365-Sizing.html -ErrorAction SilentlyContinue
 Write-Output $HTML_CODE |Format-Table -AutoSize | Out-File -FilePath .\Rubrik-M365-Sizing.html -Append
 
 
-
+ 
 Write-Output "`n`nM365 Sizing information has been written to $((Get-ChildItem Rubrik-M365-Sizing.html).FullName)`n`n"
 if ($OutputObject) {
     return $M365Sizing
