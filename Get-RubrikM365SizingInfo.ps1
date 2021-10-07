@@ -255,11 +255,13 @@ Disconnect-MgGraph
 Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module."
 Connect-ExchangeOnline -ShowBanner:$false
 Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing information."
-$ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| select name,FolderAndSubfolderSize
-$SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited | Get-ExoMailboxStatistics| select TotalItemSize
+$ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited 
+$ArchiveMailboxesFolders = $ArchiveMailboxes | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| Select-Object name,FolderAndSubfolderSize
+$SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited 
+$SharedMailboxesSize = $SharedMailboxes | Get-ExoMailboxStatistics| Select-Object TotalItemSize
 
 $ArchiveMailboxSizeGb = 0
-foreach($Folder in $ArchiveMailboxes){
+foreach($Folder in $ArchiveMailboxesFolders){
     $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
     $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
     
@@ -270,7 +272,7 @@ foreach($Folder in $ArchiveMailboxes){
 
 Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox information."
 $SharedMailboxesSizeGb = 0
-foreach($Folder in $SharedMailboxes){
+foreach($Folder in $SharedMailboxesSize){
     $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
     $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
     
