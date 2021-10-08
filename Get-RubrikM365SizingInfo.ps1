@@ -32,7 +32,7 @@ param (
     $OutputObject
 )
 
-$Version = "v2.1"
+$Version = "v2.2"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -260,6 +260,7 @@ Connect-ExchangeOnline -ShowBanner:$false
 Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing information."
 $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited 
 $ArchiveMailboxesFolders = $ArchiveMailboxes | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| Select-Object name,FolderAndSubfolderSize
+
 $SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited 
 $SharedMailboxesSize = $SharedMailboxes | Get-ExoMailboxStatistics| Select-Object TotalItemSize
 
@@ -302,11 +303,6 @@ foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
         $M365Sizing.TotalDataToProtect.ThreeYearInGB = $M365Sizing.TotalDataToProtect.ThreeYearInGB + $M365Sizing.$($Section).ThreeYearStorageForecastInGB
     }
 
-    
-
-    Write-Output $Section | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
-    Write-Output $M365Sizing.$($Section) |Format-Table -AutoSize | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
-    Write-Output "==========================================================================" | Out-File -FilePath .\RubrikMS365Sizing.txt -Append
 }
 
 # Calculate the total number of licenses required
@@ -317,9 +313,9 @@ if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
 }
 
 # Account for a large number of Shared Mailboxes
-if ($SharedMailboxes.count -gt $UserLicensesRequired){
-    $UserLicensesRequired = $SharedMailboxes.count
-}
+# if ($SharedMailboxes.count -gt $UserLicensesRequired){
+#     $UserLicensesRequired = $SharedMailboxes.count
+# }
 
 #region HTML Code for Output
 $HTML_CODE=@"                            
