@@ -3,6 +3,7 @@
 
 ```
 PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
+[INFO] Starting the Rubrik Microsoft 365 sizing script (v2.1).
 [INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions.
 [INFO] Retrieving Usage Details for Exchange.
 [INFO] Retrieving Usage Details for Sharepoint.                                                                           

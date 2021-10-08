@@ -32,6 +32,9 @@ param (
     $OutputObject
 )
 
+$Version = "v2.1"
+Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
+
 # Provide OS agnostic temp folder path for raw reports
 $systemTempFolder = [System.IO.Path]::GetTempPath()
 $ProgressPreference = 'SilentlyContinue'
@@ -1227,16 +1230,9 @@ $HTML_CODE=@"
         </div>
     </div>
 
-
-
-
-
-
-
-
-
-
-
+    <footer>
+        <p style="color:#D3D3D3;text-align:right;padding-right: 10px;">$Version</p>
+    </footer>
 </body>
 
 </html>             
