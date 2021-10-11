@@ -255,41 +255,41 @@ Disconnect-MgGraph
 
 # The Microsoft Exchange Reports do not contain In-Place Archive sizing information so we also need to connect to the Exchange Online module to
 # get this information
-Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module."
-Connect-ExchangeOnline -ShowBanner:$false
-Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing information."
-$ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited 
-$ArchiveMailboxesFolders = $ArchiveMailboxes | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| Select-Object name,FolderAndSubfolderSize
+# Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module."
+# Connect-ExchangeOnline -ShowBanner:$false
+# Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing information."
+# $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited 
+# $ArchiveMailboxesFolders = $ArchiveMailboxes | Get-EXOMailboxFolderStatistics -Archive | Where-Object {$_.Name -eq "Archive"}| Select-Object name,FolderAndSubfolderSize
 
-$SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited 
-$SharedMailboxesSize = $SharedMailboxes | Get-ExoMailboxStatistics| Select-Object TotalItemSize
+# $SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited 
+# $SharedMailboxesSize = $SharedMailboxes | Get-ExoMailboxStatistics| Select-Object TotalItemSize
 
-$ArchiveMailboxSizeGb = 0
-foreach($Folder in $ArchiveMailboxesFolders){
-    $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
-    $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+# $ArchiveMailboxSizeGb = 0
+# foreach($Folder in $ArchiveMailboxesFolders){
+#     $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
+#     $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
     
-    $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+#     $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
 
-    $ArchiveMailboxSizeGb += $FolderSizeInGb
-}
+#     $ArchiveMailboxSizeGb += $FolderSizeInGb
+# }
 
-Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox information."
-$SharedMailboxesSizeGb = 0
-foreach($Folder in $SharedMailboxesSize){
-    $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
-    $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+# Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox information."
+# $SharedMailboxesSizeGb = 0
+# foreach($Folder in $SharedMailboxesSize){
+#     $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
+#     $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
     
-    $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+#     $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
 
-    $SharedMailboxesSizeGb += $FolderSizeInGb
-}
+#     $SharedMailboxesSizeGb += $FolderSizeInGb
+# }
 
-$M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
-$M365Sizing.Exchange.TotalSizeGB += $SharedMailboxesSizeGb
+# $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
+# $M365Sizing.Exchange.TotalSizeGB += $SharedMailboxesSizeGb
 
-Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
-Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
+# Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
+# Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
 
 Write-Output "[INFO] Calculating the forecasted total storage need for Rubrik."
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
