@@ -32,7 +32,7 @@ param (
     $OutputObject
 )
 
-$Version = "v2.3"
+$Version = "v2.4"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -259,11 +259,31 @@ Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module."
 Connect-ExchangeOnline -ShowBanner:$false
 
 Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing."
+
+
+$FirstInterval = 500
+$SkipInternval = $FirstInterval
 $ArchiveMailboxSizeGb = 0
 try {
     $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited
-    $ArchiveMailboxesFolders = $ArchiveMailboxes | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
+    $ArchiveMailboxesCount = $ArchiveMailboxes.Count
 
+    $ArchiveMailboxesFolders = @()
+    # Process the first N number of Archive Mailboxes. Where N = $FirstInterval
+    $ArchiveMailboxesFolders += $ArchiveMailboxes | Select -First $FirstInterval | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
+    
+    # Process any remaining Archive Mailboxes at the pre-defined $FirstInterval
+    if ($ArchiveMailboxesCount -ge $FirstInterval){
+
+        while($ArchiveMailboxesCount -ge 0)
+        {   
+            $ArchiveMailboxesCount = $ArchiveMailboxesCount - $FirstInterval
+            $ArchiveMailboxesFolders += $ArchiveMailboxes | Select -Skip $SkipInternval -First $FirstInterval | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
+            $SkipInternval = $SkipInternval + $FirstInterval
+        }
+
+    }
+    
     foreach($Folder in $ArchiveMailboxesFolders){
         $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
         $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
@@ -279,10 +299,29 @@ catch {
 }
 
 Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox sizing."
+# Reset First and Skip interval values
+$FirstInterval = 500
+$SkipInternval = $FirstInterval
 $SharedMailboxesSizeGb = 0
 try {
+    # Process the first N number of Shared Mailboxes. Where N = $FirstInterval
     $SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited 
-    $SharedMailboxesSize = $SharedMailboxes | Get-ExoMailboxStatistics| Select-Object TotalItemSize
+    $SharedMailboxesCount = $SharedMailboxes.Count
+
+    $SharedMailboxesSize = @()
+    $SharedMailboxesSize += $SharedMailboxes | Select -First $FirstInterval | Get-ExoMailboxStatistics| Select-Object TotalItemSize
+
+    # Process any remaining Shared Mailboxes at the pre-defined $FirstInterval
+    if ($SharedMailboxesCount -ge $FirstInterval){
+
+        while($SharedMailboxesCount -ge 0)
+        {   
+            $SharedMailboxesCount = $SharedMailboxesCount - $FirstInterval
+            $SharedMailboxesSize += $SharedMailboxes | Select -Skip $SkipInternval -First $FirstInterval | Get-ExoMailboxStatistics| Select-Object TotalItemSize
+            $SkipInternval = $SkipInternval + $FirstInterval
+        }
+
+    }
 
     foreach($Folder in $SharedMailboxesSize){
         $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
@@ -325,6 +364,7 @@ if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
 } else {
     $UserLicensesRequired = $M365Sizing.OneDrive.NumberOfUsers
 }
+
 
 #region HTML Code for Output
 $HTML_CODE=@"                            
