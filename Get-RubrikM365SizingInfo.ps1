@@ -24,15 +24,15 @@
 [CmdletBinding()]
 param (
     [Parameter()]
-    [ValidateSet("7","30","90","180")]
-    [string]$Period = '180',
+    [bool]$EnableDebug = $false,
     # Parameter help description
     [Parameter()]
     [Switch]
     $OutputObject
 )
 
-$Version = "v2.4"
+$Period = '180'
+$Version = "v2.5"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -57,12 +57,14 @@ function Get-MgReport {
             Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/reports/$($ReportName)(period=`'D$($Period)`')" -OutputFilePath "$systemTempFolder\$ReportName.csv"
 
             "$systemTempFolder\$ReportName.csv"
+
         }
         catch {
 
             $errorMessage = $_.Exception | Out-String
             
             if($errorMessage.Contains('Response status code does not indicate success: Forbidden (Forbidden)')) {
+
                 throw "This script requires that you authenticate using an account with 'Reports.Read.All' permissions."
             } 
             
@@ -148,8 +150,26 @@ else
     throw "The 'ExchangeOnlineManagement' is required for this script. Run the follow command to install: Install-Module ExchangeOnlineManagement"
 }
 
-Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions."
-Connect-MgGraph -Scopes "Reports.Read.All"  | Out-Null
+Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' and 'User.Read.All' permissions."
+Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All"  | Out-Null
+
+if ($EnableDebug) {
+    try {
+        $user = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/me"
+        $permissions = Get-MgUserOauth2PermissionGrant -UserId $user.id
+        
+        Write-Output "[DEBUG] The authenticated user account has the following permissions:$($permissions.Scope)"
+        
+    }
+    catch {
+        $errorMessage = $_.Exception | Out-String
+                
+                
+        throw $_.Exception
+    }
+}
+
+
 
 
 $M365Sizing = [ordered]@{
