@@ -1,5 +1,7 @@
 # Microsoft 365 Sizing PowerShell Script
 
+[![Download zip](https://user-images.githubusercontent.com/8610203/145614905-a6d64f3a-adab-4c3f-9bf9-ffa4fdf6793f.png "Download zip")](https://github.com/rubrikinc/microsoft-365-sizing/archive/refs/heads/main.zip)
+
 
 ```
 PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
