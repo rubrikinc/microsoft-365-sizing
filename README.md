@@ -65,6 +65,15 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\RubrikMS365Sizing.txt
 ```
 
+When 5,000 or more Shared Mailboxes or In-Place archives are detected, you will receive the following prompt:
+
+```
+[ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
+Enter the User Principal Name: 
+```
+
+The "User Principal Name" corresponds with the account name you used to sign into Microsoft 365 during the Modern Authentication process.
+
 ## Example Output
 
 ![Rubrik Sizing HTML Output](https://user-images.githubusercontent.com/8610203/135927453-14334d14-886b-4000-b749-93934d341bd9.png)
