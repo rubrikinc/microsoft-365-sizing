@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v2.6"
+$Version = "v2.7"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -435,6 +435,11 @@ foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 }
 
 # Calculate the total number of licenses required
+if ($SharedMailboxesCount -gt $M365Sizing.Exchange.NumberOfUsers){
+    Write-Output "[INFO] Detected more Shared Mailboxes than User Mailboxes. Automatically updating license count requirements."
+    $M365Sizing.Exchange.NumberOfUsers = $SharedMailboxesCount
+} 
+
 if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
     $UserLicensesRequired = $M365Sizing.Exchange.NumberOfUsers
 } else {
@@ -1503,6 +1508,7 @@ Executes the script to gather EAS Device statistics and output them to a csv fil
     $InformationPreference = "Continue"
     $Global:ErrorActionPreference = "Stop"
     Write-Log ("Error Action Preference: " + $Global:ErrorActionPreference)
+    Write-Loug ("Information Preference: " + $InformationPreference)
 
     # Log the script block for debugging purposes
     Write-log $ScriptBlock
