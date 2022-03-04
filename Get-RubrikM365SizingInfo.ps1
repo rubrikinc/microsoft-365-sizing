@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v2.7"
+$Version = "v2.8"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -64,7 +64,7 @@ function Get-MgReport {
             $errorMessage = $_.Exception | Out-String
             
             if($errorMessage.Contains('Response status code does not indicate success: Forbidden (Forbidden)')) {
-
+                Disconnect-MgGraph
                 throw "This script requires that you authenticate using an account with 'Reports.Read.All' permissions."
             } 
             
