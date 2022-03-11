@@ -74,6 +74,15 @@ Enter the User Principal Name:
 
 The "User Principal Name" corresponds with the account name you used to sign into Microsoft 365 during the Modern Authentication process.
 
+## What information does the script access?
+
+The majority of the information collected is directly from the Microsoft 365 [Usage reports](https://docs.microsoft.com/en-us/microsoft-365/admin/activity-reports/activity-reports?view=o365-worldwide) that are found in the admin center.
+The benefit of this approach is that the information can be pulled in bulk and does not require a complete crawl of your Microsoft 365 subscription. 
+
+The only downside of this approach is that the Usage reports do not contain any Shared Mailbox or In-Place archive information. To gather that information Rubrik will request a seperate set of permissions to pull statistics for each Shared Mailbox and In-Place archive in your environment. Depending on the size of you environment, this can take a significant amount of time.  
+
+
+
 ## Example Output
 
 ![Rubrik Sizing HTML Output](https://user-images.githubusercontent.com/8610203/135927453-14334d14-886b-4000-b749-93934d341bd9.png)
