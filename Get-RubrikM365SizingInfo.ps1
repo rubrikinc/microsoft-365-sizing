@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v2.8"
+$Version = "v2.9"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -65,7 +65,7 @@ function Get-MgReport {
             
             if($errorMessage.Contains('Response status code does not indicate success: Forbidden (Forbidden)')) {
                 Disconnect-MgGraph
-                throw "This script requires that you authenticate using an account with 'Reports.Read.All' permissions."
+                throw "The user account used for authentication must have permissions covered by Reports Reader admin role."
             } 
             
             throw $_.Exception
@@ -254,19 +254,19 @@ foreach($Section in $StorageUsageReports.Keys){
 
 
 #region License usage
-Write-Output "[INFO] Retrieving the subscription License details."
-$licenseReportPath = Get-MgReport -ReportName getOffice365ActiveUserDetail -Period 180
-$licenseReport = Import-Csv -Path $licenseReportPath | Where-Object 'is deleted' -eq 'FALSE'
+# Write-Output "[INFO] Retrieving the subscription License details."
+# $licenseReportPath = Get-MgReport -ReportName getOffice365ActiveUserDetail -Period 180
+# $licenseReport = Import-Csv -Path $licenseReportPath | Where-Object 'is deleted' -eq 'FALSE'
 
 
-# Clean up temp CSV
-Remove-Item -Path $licenseReportPath
+# # Clean up temp CSV
+# Remove-Item -Path $licenseReportPath
 
-$licensesToIgnore = "POWER APPS PER USER PLAN","DYNAMICS 365 REMOTE ASSIST","POWER AUTOMATE PER USER PLAN","BUSINESS APPS (FREE)","MICROSOFT BUSINESS CENTER","DYNAMICS 365 GUIDES","POWERAPPS PER APP BASELINE","MICROSOFT MYANALYTICS","MICROSOFT 365 PHONE SYSTEM","POWER BI PRO","AZURE ACTIVE DIRECTORY PREMIUM","MICROSOFT INTUNE","DYNAMICS 365 TEAM MEMBERS","SECURITY E3","ENTERPRISE MOBILITY","MICROSOFT WORKPLACE ANALYTICS","MICROSOFT POWER AUTOMATE FREE","MICROSOFT TEAMS EXPLORATORY","MICROSOFT STREAM TRIAL", "VISIO PLAN 2","MICROSOFT POWER APPS PLAN 2 TRIAL","DYNAMICS 365 CUSTOMER ENGAGEMENT PLAN","DYNAMICS 365 BUSINESS CENTRAL ESSENTIAL","PROJECT PLAN","DYNAMICS 365 BUSINESS CENTRAL FOR IWS","PROJECT ONLINE ESSENTIALS","MICROSOFT TEAMS TRIAL","POWERAPPS AND LOGIC FLOWS","DYNAMICS 365 CUSTOMER VOICE TRIAL","MICROSOFT DEFENDER FOR ENDPOINT","DYNAMICS 365 SALES PREMIUM VIRAL TRIAL","DYNAMICS 365 P1 TRIAL FOR INFORMATION WORKERS","POWER BI (FREE)","APP CONNECT", "AZURE ACTIVE DIRECTORY PREMIUM P1","DYNAMICS 365 UNIFIED OPERATIONS PLAN","MICROSOFT DYNAMICS AX7  USER TRIAL","MICROSOFT DYNAMICS AX7 USER TRIAL","MICROSOFT POWER APPS PLAN 2 (QUALIFIED OFFER)","POWER APPS PER USER PLAN - GLOBAL","POWERAPPS PER APP BASELINE ACCESS","RIGHTS MANAGEMENT ADHOC","VISIO PLAN 1",""
+# $licensesToIgnore = "POWER APPS PER USER PLAN","DYNAMICS 365 REMOTE ASSIST","POWER AUTOMATE PER USER PLAN","BUSINESS APPS (FREE)","MICROSOFT BUSINESS CENTER","DYNAMICS 365 GUIDES","POWERAPPS PER APP BASELINE","MICROSOFT MYANALYTICS","MICROSOFT 365 PHONE SYSTEM","POWER BI PRO","AZURE ACTIVE DIRECTORY PREMIUM","MICROSOFT INTUNE","DYNAMICS 365 TEAM MEMBERS","SECURITY E3","ENTERPRISE MOBILITY","MICROSOFT WORKPLACE ANALYTICS","MICROSOFT POWER AUTOMATE FREE","MICROSOFT TEAMS EXPLORATORY","MICROSOFT STREAM TRIAL", "VISIO PLAN 2","MICROSOFT POWER APPS PLAN 2 TRIAL","DYNAMICS 365 CUSTOMER ENGAGEMENT PLAN","DYNAMICS 365 BUSINESS CENTRAL ESSENTIAL","PROJECT PLAN","DYNAMICS 365 BUSINESS CENTRAL FOR IWS","PROJECT ONLINE ESSENTIALS","MICROSOFT TEAMS TRIAL","POWERAPPS AND LOGIC FLOWS","DYNAMICS 365 CUSTOMER VOICE TRIAL","MICROSOFT DEFENDER FOR ENDPOINT","DYNAMICS 365 SALES PREMIUM VIRAL TRIAL","DYNAMICS 365 P1 TRIAL FOR INFORMATION WORKERS","POWER BI (FREE)","APP CONNECT", "AZURE ACTIVE DIRECTORY PREMIUM P1","DYNAMICS 365 UNIFIED OPERATIONS PLAN","MICROSOFT DYNAMICS AX7  USER TRIAL","MICROSOFT DYNAMICS AX7 USER TRIAL","MICROSOFT POWER APPS PLAN 2 (QUALIFIED OFFER)","POWER APPS PER USER PLAN - GLOBAL","POWERAPPS PER APP BASELINE ACCESS","RIGHTS MANAGEMENT ADHOC","VISIO PLAN 1",""
 
-$assignedProducts = $licenseReport | ForEach-Object {$_.'Assigned Products'.Split('+')} | Group-Object | Select-Object Name,Count
+# $assignedProducts = $licenseReport | ForEach-Object {$_.'Assigned Products'.Split('+')} | Group-Object | Select-Object Name,Count
 
-$assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365Sizing.Licensing.Add($_.name, $_.count)}}
+# $assignedProducts | ForEach-Object {if ($_.name -NotIn $licensesToIgnore) {$M365Sizing.Licensing.Add($_.name, $_.count)}}
 
 Write-Output "[INFO] Disconnecting from the Microsoft Graph API."
 Disconnect-MgGraph
