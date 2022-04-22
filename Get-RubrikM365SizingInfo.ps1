@@ -147,7 +147,6 @@ function ProcessUsageReport {
 
 if ([string]::IsNullOrEmpty($AzureAdGroupName)) {
     $AzureAdRequired = $false
-    throw "empty"
 } else {
     $AzureAdRequired = $true
 }
