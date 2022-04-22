@@ -7,12 +7,14 @@
 PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
 [INFO] Starting the Rubrik Microsoft 365 sizing script (v2.1).
 [INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions.
-[INFO] Retrieving Usage Details for Exchange.
-[INFO] Retrieving Usage Details for Sharepoint.                                                                           
-[INFO] Retrieving Usage Details for OneDrive.                                                                             
-[INFO] Retrieving Storage Usage for Exchange.                                                                             
-[INFO] Retrieving Storage Usage for Sharepoint.                                                                           
-[INFO] Retrieving Storage Usage for OneDrive.                                                                             
+[INFO] Retrieving the Total Storage Consumed for ...
+ - Exchange
+ - SharePoint
+ - OneDrive
+[INFO] Retrieving the Average Storage Growth Forecast for ...
+ - Exchange
+ - SharePoint
+ - OneDrive                                                                            
 [INFO] Retrieving the subscription License details.                                                                       
 [INFO] Disconnecting from the Microsoft Graph API.                                                                        
 [INFO] Connecting to the Microsoft Exchange Online Module.                                                                
@@ -27,6 +29,7 @@ M365 Sizing information has been written to ~/Development/microsoft-365-sizing/R
 ## Requirements
 
 * `PowerShell >= 5.1` for PowerShell Gallery.
+* Microsoft 365 Global administrator credentials (Required to determine In-Place Archive and Shared Mailbox details)
 
 
 
@@ -36,7 +39,7 @@ M365 Sizing information has been written to ~/Development/microsoft-365-sizing/R
 2. Install the `Microsoft.Graph.Reports` and `ExchangeOnlineManagement` modules from the PowerShell Gallery
 
 ```powershell
-Install-Module Microsoft.Graph.Reports, ExchangeOnlineManagement
+Install-Module Microsoft.Graph.Reports, Microsoft.Graph.Groups, ExchangeOnlineManagement
 ```
 
 ## Usage
@@ -73,6 +76,12 @@ Enter the User Principal Name:
 ```
 
 The "User Principal Name" corresponds with the account name you used to sign into Microsoft 365 during the Modern Authentication process.
+
+To filter OneDrive and Exchange results to a specific subset of users in an AzureAdGroup use the `-AzureAdGroupName` flag.
+
+```
+./Get-RubrikM365SizingInfo.ps1 -AzureAdGroupName "RubrikEmployees"
+```
 
 ## What information does the script access?
 

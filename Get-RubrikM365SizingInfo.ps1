@@ -27,12 +27,12 @@ param (
     [bool]$EnableDebug = $false,
     # Parameter help description
     [Parameter()]
-    [Switch]
+    [String]$AzureAdGroupName,
     $OutputObject
 )
 
 $Period = '180'
-$Version = "v2.9"
+$Version = "v3.0"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -118,15 +118,40 @@ function ProcessUsageReport {
         [string]$Section
     )
 
+
     $ReportDetail = Import-Csv -Path $ReportCSV | Where-Object {$_.'Is Deleted' -eq 'FALSE'}
-    $SummarizedData = $ReportDetail | Measure-Object -Property 'Storage Used (Byte)' -Sum -Average
+    if (($AzureAdRequired) -and ($Section -ne "SharePoint")) {
+        # The OneDrive and Exchange Usage reports have different column names that need to be accounted for.
+       
+        if ($Section -eq "OneDrive") {
+            $FilterByField = "Owner Principal Name"
+        } else {
+            $FilterByField = "User Principal Name"
+        }
+        
+        $SummarizedData = $ReportDetail | Where-Object {$_.$FilterByField -in $AzureAdGroupMembersByUserPrincipalName} | Measure-Object -Property 'Storage Used (Byte)' -Sum -Average
+
+
+    } else {
+
+        $SummarizedData = $ReportDetail | Measure-Object -Property 'Storage Used (Byte)' -Sum -Average
+
+    }
     switch ($Section) {
         'SharePoint' { $M365Sizing.$($Section).NumberOfSites = $SummarizedData.Count }
         Default {$M365Sizing.$($Section).NumberOfUsers = $SummarizedData.Count}
     }
     $M365Sizing.$($Section).TotalSizeGB = [math]::Round(($SummarizedData.Sum / 1GB), 2, [MidPointRounding]::AwayFromZero)
     $M365Sizing.$($Section).SizePerUserGB = [math]::Round((($SummarizedData.Average) / 1GB), 2)
+} 
+
+if ([string]::IsNullOrEmpty($AzureAdGroupName)) {
+    $AzureAdRequired = $false
+    throw "empty"
+} else {
+    $AzureAdRequired = $true
 }
+
 
 # Validate the required 'Microsoft.Graph.Reports' is installed
 # and provide a user friendly message when it's not.
@@ -150,9 +175,45 @@ else
     throw "The 'ExchangeOnlineManagement' is required for this script. Run the follow command to install: Install-Module ExchangeOnlineManagement"
 }
 
+if ($AzureAdRequired) {
+    # Validate the required 'Azure.Graph.Authentication' is installed
+    # and provide a user friendly message when it's not.
+    if (Get-Module -ListAvailable -Name Microsoft.Graph.Groups)
+    {
+        
+    }
+    else
+    {
+        throw "The 'Microsoft.Graph.Groups' is required for filtering by a specific Azure AD Group. Run the follow command to install: Install-Module Microsoft.Graph.Groups"
+    }
+}
 
-Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' and 'User.Read.All' permissions."
-Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All"  | Out-Null
+
+Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' (if filtering results by Azure AD Group) permissions."
+Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All","Group.Read.All"  | Out-Null
+
+Write-Output "[INFO] Looking up all users in the provided Azure AD Group."
+if ($AzureAdRequired) {
+    $AzureAdGroupDetails = Get-MgGroup -Filter "DisplayName eq '$AzureAdGroupName'"
+    
+    if ($AzureAdGroupDetails.Count -eq 0) {
+        throw "The Azure AD Group '$AzureAdGroupName' does not exist."
+    }
+
+    $AzureAdGroupMembersById = Get-MgGroupMember -GroupId $AzureAdGroupDetails.Id
+    $AzureAdGroupMembersByUserPrincipalName = @()
+
+    $AzureAdGroupMembersById | Foreach-Object  {
+            if ($_.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.user"){
+             $AzureAdGroupMembersByUserPrincipalName += $_.AdditionalProperties["userPrincipalName"]
+         }
+     }
+
+    
+     Write-Output "[INFO] Discovered $($AzureAdGroupMembersByUserPrincipalName.Count) users in the provided Azure AD Group."
+}
+
+
 
 if ($EnableDebug) {
     try {
@@ -225,12 +286,14 @@ $UsageDetailReports.Add('Exchange', 'getMailboxUsageDetail')
 $UsageDetailReports.Add('OneDrive', 'getOneDriveUsageAccountDetail')
 $UsageDetailReports.Add('SharePoint', 'getSharePointSiteUsageDetail')
 
+Write-Output "[INFO] Retrieving the Total Storage Consumed for ..."
 foreach($Section in $UsageDetailReports.Keys){
-    Write-Output "[INFO] Retrieving Usage Details for $section."
+    Write-Output " - $Section"
     $ReportCSV = Get-MgReport -ReportName $UsageDetailReports[$Section] -Period $Period
     ProcessUsageReport -ReportCSV $ReportCSV -ReportName $UsageDetailReports[$Section] -Section $Section
+    Remove-Item -Path $ReportCSV
 }
-Remove-Item -Path $ReportCSV
+
 #endregion
 
 
@@ -242,8 +305,9 @@ $StorageUsageReports = @{}
 $StorageUsageReports.Add('Exchange', 'getMailboxUsageStorage')
 $StorageUsageReports.Add('OneDrive', 'getOneDriveUsageStorage')
 $StorageUsageReports.Add('SharePoint', 'getSharePointSiteUsageStorage')
+Write-Output "[INFO] Retrieving the Average Storage Growth Forecast for ..."
 foreach($Section in $StorageUsageReports.Keys){
-    Write-Output "[INFO] Retrieving Storage Usage for $section."
+    Write-Output " - $Section"
     $ReportCSV = Get-MgReport -ReportName $StorageUsageReports[$Section] -Period $Period
     $AverageGrowth = Measure-AverageGrowth -ReportCSV $ReportCSV -ReportName $StorageUsageReports[$Section]
     $M365Sizing.$($Section).AverageGrowthPercentage = [math]::Round($AverageGrowth,2)
