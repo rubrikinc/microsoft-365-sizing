@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.0"
+$Version = "v3.1"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -199,8 +199,7 @@ if ($AzureAdRequired) {
         throw "The Azure AD Group '$AzureAdGroupName' does not exist."
     }
 
-    $AzureAdGroupMembersById = Get-MgGroupMember -GroupId $AzureAdGroupDetails.Id
-    $AzureAdGroupMembersByUserPrincipalName = @()
+    $AzureAdGroupMembersById = Get-MgGroupMember -GroupId $AzureAdGroupDetails.Id -All
 
     $AzureAdGroupMembersById | Foreach-Object  {
             if ($_.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.user"){
