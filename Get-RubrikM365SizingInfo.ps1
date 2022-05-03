@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.1"
+$Version = "v3.2"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -122,7 +122,6 @@ function ProcessUsageReport {
     $ReportDetail = Import-Csv -Path $ReportCSV | Where-Object {$_.'Is Deleted' -eq 'FALSE'}
     if (($AzureAdRequired) -and ($Section -ne "SharePoint")) {
         # The OneDrive and Exchange Usage reports have different column names that need to be accounted for.
-       
         if ($Section -eq "OneDrive") {
             $FilterByField = "Owner Principal Name"
         } else {
@@ -201,6 +200,11 @@ if ($AzureAdRequired) {
 
     $AzureAdGroupMembersById = Get-MgGroupMember -GroupId $AzureAdGroupDetails.Id -All
 
+    if ($EnableDebug) {
+        Write-Output "[DEBUG] Azure AD Group Members Size: $($AzureAdGroupMembersById.Count)"
+    }
+
+    $AzureAdGroupMembersByUserPrincipalName = @()
     $AzureAdGroupMembersById | Foreach-Object  {
             if ($_.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.user"){
              $AzureAdGroupMembersByUserPrincipalName += $_.AdditionalProperties["userPrincipalName"]
@@ -337,7 +341,7 @@ Disconnect-MgGraph
 # get this information
 Write-Output "[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities."
 Connect-ExchangeOnline -ShowBanner:$false
-$ManualUserPrincipalName = $null
+$ManualUserPrincipalName = $null 
 $ActionRequiredLogMessage = "[ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
 $ActionRequiredPromptMessage = "Enter the User Principal Name"
 Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing."
