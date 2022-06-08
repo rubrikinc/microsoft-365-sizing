@@ -519,17 +519,23 @@ if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
 
 $Calculate_Users_Required=[math]::ceiling($UserLicensesRequired)
 $Calculate_Storage_Required=[math]::ceiling($($M365Sizing[4].OneYearInGB))
-#$Calculate_Users_Required=[int]($UserLicensesRequired)
-#$Calculate_Storage_Required=[int]($M365Sizing)
 
-#Query M365Licsolver Azure Function
-if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 75) {
-    write-output 'Less than 75GB/Users - html solving'
-    $Body = ‘{“users”:“‘+$Calculate_Users_Required+‘“,”data”:“‘+$Calculate_Storage_Required+‘“}’
-    $webData = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $Body -Method ‘POST’)
-    $FiveGBPacks=$webdata.FiveGBSubscriptions
-    $TwentyGBPacks=$webdata.TwentyGBSubscriptions
-    $FiftyGBPacks=$webdata.FiftyGBSubscriptions
+# Query M365Licsolver Azure Function
+# If less than 76GB Average per user then query the azure function that calculates the best mix of subscription types. If more than 76 then Unlimited is the best option.
+if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
+    $SolverQuery = ‘{“users”:“‘+$Calculate_Users_Required+‘“,”data”:“‘+$Calculate_Storage_Required+‘“}’
+    try {
+        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $SolverQuery -Method ‘POST’)
+    }
+    catch {
+        $errorMessage = $_.Exception | Out-String
+        if($errorMessage.Contains('Response status code does not indicate success: 404')) {
+            Write-Output "[Info] Unable to Calculate Subscriptions."
+        } 
+    }
+    $FiveGBPacks=$APIReturn.FiveGBSubscriptions
+    $TwentyGBPacks=$APIReturn.TwentyGBSubscriptions
+    $FiftyGBPacks=$APIReturn.FiftyGBSubscriptions
     $UnlimitedGBPacks=0
     $UnlimitedGBUsers=0
     $FiveGBUsers=$FiveGBPacks*10
