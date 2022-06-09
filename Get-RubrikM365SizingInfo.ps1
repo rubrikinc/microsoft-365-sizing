@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.2"
+$Version = "v3.3"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -308,6 +308,9 @@ $StorageUsageReports.Add('Exchange', 'getMailboxUsageStorage')
 $StorageUsageReports.Add('OneDrive', 'getOneDriveUsageStorage')
 $StorageUsageReports.Add('SharePoint', 'getSharePointSiteUsageStorage')
 Write-Output "[INFO] Retrieving the Average Storage Growth Forecast for ..."
+
+
+
 foreach($Section in $StorageUsageReports.Keys){
     Write-Output " - $Section"
     $ReportCSV = Get-MgReport -ReportName $StorageUsageReports[$Section] -Period $Period
@@ -315,6 +318,8 @@ foreach($Section in $StorageUsageReports.Keys){
     $M365Sizing.$($Section).AverageGrowthPercentage = [math]::Round($AverageGrowth,2)
     Remove-Item -Path $ReportCSV
 }
+
+
 #endregion
 
 
@@ -512,6 +517,44 @@ if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
     $UserLicensesRequired = $M365Sizing.OneDrive.NumberOfUsers
 }
 
+$Calculate_Users_Required=[math]::ceiling($UserLicensesRequired)
+$Calculate_Storage_Required=[math]::ceiling($($M365Sizing[4].OneYearInGB))
+
+# Query M365Licsolver Azure Function
+# If less than 76GB Average per user then query the azure function that calculates the best mix of subscription types. If more than 76 then Unlimited is the best option.
+if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
+    $SolverQuery = ‘{“users”:“‘+$Calculate_Users_Required+‘“,”data”:“‘+$Calculate_Storage_Required+‘“}’
+    try {
+        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $SolverQuery -Method ‘POST’)
+    }
+    catch {
+        $errorMessage = $_.Exception | Out-String
+        if($errorMessage.Contains('Response status code does not indicate success: 404')) {
+            Write-Output "[Info] Unable to Calculate Subscriptions."
+        } 
+    }
+    $FiveGBPacks=$APIReturn.FiveGBSubscriptions
+    $TwentyGBPacks=$APIReturn.TwentyGBSubscriptions
+    $FiftyGBPacks=$APIReturn.FiftyGBSubscriptions
+    $UnlimitedGBPacks=0
+    $UnlimitedGBUsers=0
+    $FiveGBUsers=$FiveGBPacks*10
+    $TwentyGBUsers=$TwentyGBPacks*10
+    $FiftyGBUsers=$FiftyGBPacks*10
+    $TotalAmountUsers=$FiveGBUsers + $TwentyGBUsers + $FiftyGBUsers
+    $TotalAmountStorage=($FiveGBUsers*5) + ($TwentyGBUsers*20) + ($FiftyGBUsers*50)
+} else {
+    $FiveGBPacks=0
+    $TwentyGBPacks=0
+    $FiftyGBPacks=0
+    $FiveGBUsers=0
+    $TwentyGBUsers=0
+    $FiftyGBUsers=0
+    $UnlimitedGBPacks=$Calculate_Users_Required=[math]::ceiling($UserLicensesRequired/10)
+    $UnlimitedGBUsers=$UnlimitedGBPacks*10
+    $TotalAmountUsers=$UnlimitedGBUsers
+    $TotalAmountStorage="Unlimited"
+}
 
 #region HTML Code for Output
 $HTML_CODE=@"                            
@@ -1422,13 +1465,338 @@ $HTML_CODE=@"
         </div>
     </div>
 
+
+    <!-- Subscription Output -->
+    <div class="card-container">
+        <div class="card">
+            <div class="card-header ">
+                <div class="rubrik-snowflake">
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" height="52" width="auto" viewBox="0 0 50 38.77">
+                        <defs>
+                            <style>
+                                .cls-1 {
+                                    fill: #fff
+                                }
+
+                                .cls-1,
+                                .cls-2 {
+                                    fill-rule: evenodd
+                                }
+                            </style>
+                            <mask id="mask" x="13.3" y="0" width="12.35" height="12.27" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-2">
+                                        <path id="path-1" class="cls-1"
+                                            d="M19.51.22a.83.83 0 0 0-.32.2l-5.34 5.32a.84.84 0 0 0 0 1.19l5.34 5.32a.84.84 0 0 0 1.19 0l5.33-5.32a.84.84 0 0 0 0-1.19L20.38.42a.83.83 0 0 0-.32-.2h-.55z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-2-2" x="13.3" y="26.53" width="12.35" height="12.25"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-4">
+                                        <path id="path-3" class="cls-1"
+                                            d="M19.19 27l-5.34 5.32a.83.83 0 0 0 0 1.18l5.34 5.33a.85.85 0 0 0 .25.17h.69a.85.85 0 0 0 .25-.17l5.33-5.33a.83.83 0 0 0 0-1.18L20.38 27a.82.82 0 0 0-.6-.25.81.81 0 0 0-.59.25">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-3" x="26.6" y="13.22" width="12.35" height="12.32"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-6">
+                                        <path id="path-5" class="cls-1"
+                                            d="M32.49 13.69L27.15 19a.86.86 0 0 0 0 1.19l5.34 5.32a.84.84 0 0 0 1.19 0L39 20.2a.84.84 0 0 0 0-1.2l-5.33-5.32a.84.84 0 0 0-.59-.24.85.85 0 0 0-.6.24">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-4-2" x="9.63" y="33.2" width="3.17" height="4.57" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-8">
+                                        <path id="path-7" class="cls-1"
+                                            d="M12.51 33.61L10.14 36a.59.59 0 0 0 .15 1l2 1a.52.52 0 0 0 .78-.52v-3.63c0-.28-.1-.43-.25-.43a.53.53 0 0 0-.35.19">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-5" x="26.15" y="33.2" width="3.17" height="4.57" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-10">
+                                        <path id="path-9" class="cls-1"
+                                            d="M26.46 33.85v3.56a.52.52 0 0 0 .77.52l2.05-1a.59.59 0 0 0 .14-1l-2.37-2.36a.52.52 0 0 0-.34-.19c-.15 0-.25.15-.25.43">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-6-2" x="26.15" y="26.04" width="6.49" height="6.48"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-12">
+                                        <path id="path-11" class="cls-1"
+                                            d="M27.3 26.27a.84.84 0 0 0-.84.83v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .89-.84v-4.8a.84.84 0 0 0-.84-.83H27.3z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-7" x="33.32" y="9.56" width="4.58" height="3.17" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-14">
+                                        <path id="path-13" class="cls-1"
+                                            d="M36.19 10l-2.38 2.37c-.32.32-.21.59.25.59h3.57a.53.53 0 0 0 .52-.78l-1-2a.62.62 0 0 0-.54-.36.65.65 0 0 0-.45.21">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-8-2" x="26.15" y="1" width="3.17" height="4.57" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-16">
+                                        <path id="path-15" class="cls-1"
+                                            d="M26.46 1.8v3.56c0 .46.26.57.59.25l2.37-2.37a.59.59 0 0 0-.14-1l-2.05-1a.55.55 0 0 0-.23-.01.5.5 0 0 0-.5.57">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-9" x="1.05" y="9.56" width="4.58" height="3.17" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-18">
+                                        <path id="path-17" class="cls-1"
+                                            d="M2.39 10.14l-1 2a.52.52 0 0 0 .52.78H5.5c.47 0 .58-.27.25-.59L3.38 10a.65.65 0 0 0-.46-.21.59.59 0 0 0-.53.36">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-10-2" x="6.31" y="6.25" width="6.49" height="6.48"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-20">
+                                        <path id="path-19" class="cls-1"
+                                            d="M7.46 6.47a.85.85 0 0 0-.84.84v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .84-.84v-4.8a.85.85 0 0 0-.84-.84H7.46z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-11" x="9.63" y="1" width="3.17" height="4.57" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-22">
+                                        <path id="path-21" class="cls-1"
+                                            d="M12.33 1.29l-2 1a.59.59 0 0 0-.15 1l2.37 2.37c.33.32.6.21.6-.25V1.8a.51.51 0 0 0-.5-.57.74.74 0 0 0-.28.06">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-12-2" x="33.32" y="26.04" width="4.58" height="3.17"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-24">
+                                        <path id="path-23" class="cls-1"
+                                            d="M34.06 26.27c-.46 0-.57.26-.25.59l2.38 2.37a.6.6 0 0 0 1-.15l1-2a.52.52 0 0 0-.52-.77h-3.61z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-13" x="6.31" y="26.04" width="6.49" height="6.48" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-26">
+                                        <path id="path-25" class="cls-1"
+                                            d="M7.46 26.27a.84.84 0 0 0-.84.83v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .84-.84v-4.8a.84.84 0 0 0-.84-.83H7.46z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-14-2" x="1.05" y="26.04" width="4.58" height="3.17"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-28">
+                                        <path id="path-27" class="cls-1"
+                                            d="M1.94 26.27a.52.52 0 0 0-.52.77l1 2a.59.59 0 0 0 1 .15l2.37-2.37c.33-.33.22-.59-.25-.59h-3.6z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-15" x="26.15" y="6.25" width="6.49" height="6.48" maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-30">
+                                        <path id="path-29" class="cls-1"
+                                            d="M27.3 6.47a.85.85 0 0 0-.84.84v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .84-.84v-4.8a.85.85 0 0 0-.84-.84H27.3z">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                            <mask id="mask-16-2" x="0" y="13.22" width="12.35" height="12.32"
+                                maskUnits="userSpaceOnUse">
+                                <g transform="translate(-.31 -.22)">
+                                    <g id="mask-32">
+                                        <path id="path-31" class="cls-1"
+                                            d="M5.89 13.69L.55 19a.84.84 0 0 0 0 1.19l5.34 5.32a.84.84 0 0 0 1.19 0l5.33-5.32a.84.84 0 0 0 0-1.19l-5.33-5.31a.85.85 0 0 0-.6-.24.84.84 0 0 0-.59.24">
+                                        </path>
+                                    </g>
+                                </g>
+                            </mask>
+                        </defs>
+                        <g id="Symbols">
+                            <g class="svgName">
+                                <path class="name r" id="Fill-57"
+                                    d="M58 12.6c-1.58 0-2.29.43-3.74 2.16V14c0-.91-.12-1-1-1h-.74c-.91 0-1 .12-1 1v14.28c0 .9.12 1 1 1h.74c.91 0 1-.12 1-1V20.7a8.24 8.24 0 0 1 .63-3.93A3.06 3.06 0 0 1 58 15.31a3.8 3.8 0 0 1 .8.22.42.42 0 0 0 .31 0 .54.54 0 0 0 .24-.21 4.5 4.5 0 0 0 .39-.67l.23-.45a2.24 2.24 0 0 0 .28-.67c0-.51-1-.94-2.24-.94"
+                                    transform="translate(-.31 -.22)"></path>
+                                <path class="name u" id="Fill-59"
+                                    d="M66.09 22.5a6.61 6.61 0 0 0 .51 3.07 3.87 3.87 0 0 0 6.34 0 6.61 6.61 0 0 0 .51-3.07V14c0-.91.12-1 1-1h.75c.9 0 1 .12 1 1v8.8c0 2.39-.39 3.69-1.49 4.91a7.1 7.1 0 0 1-10 0c-1.1-1.22-1.49-2.52-1.49-4.91V14c0-.91.11-1 1-1h.75c.9 0 1 .12 1 1z"
+                                    transform="translate(-.31 -.22)"></path>
+                                <path class="name b" id="Fill-61"
+                                    d="M83.42 21.13c0 3.61 2.24 6.09 5.47 6.09s5.35-2.6 5.35-6.17a5.54 5.54 0 0 0-5.39-5.86c-3.19 0-5.43 2.44-5.43 5.94zm.2-5.82a7 7 0 0 1 5.7-2.67c4.49 0 7.79 3.58 7.79 8.49s-3.34 8.64-7.87 8.64a6.89 6.89 0 0 1-5.62-2.71v1.22c0 .9-.12 1-1 1h-.74c-.91 0-1-.12-1-1V1.68c0-.9.12-1 1-1h.74c.91 0 1 .12 1 1z"
+                                    transform="translate(-.31 -.22)"></path>
+                                <path class="name r" id="Fill-55"
+                                    d="M107.72 12.6c-1.57 0-2.28.43-3.74 2.16V14c0-.91-.12-1-1-1h-.75c-.9 0-1 .12-1 1v14.28c0 .9.12 1 1 1h.77c.9 0 1-.12 1-1V20.7a8.37 8.37 0 0 1 .63-3.93 3.07 3.07 0 0 1 3.1-1.46 3.8 3.8 0 0 1 .8.22.42.42 0 0 0 .31 0 .63.63 0 0 0 .25-.21 4.44 4.44 0 0 0 .38-.67l.24-.45a2.42 2.42 0 0 0 .27-.67c0-.51-1-.94-2.24-.94"
+                                    transform="translate(-.31 -.22)"></path>
+                                <path class="name i" id="Fill-63"
+                                    d="M116.4 28.28c0 .9-.12 1-1 1h-.75c-.9 0-1-.12-1-1V14c0-.91.12-1 1-1h.75c.9 0 1 .12 1 1zm.6-21.45a2 2 0 1 1-2-2 2 2 0 0 1 2 2z"
+                                    transform="translate(-.31 -.22)"></path>
+                                <path class="name k" id="Fill-65"
+                                    d="M129.84 13.47c.47-.48.47-.48 1.14-.48h1.22c.71 0 1 .2 1 .63 0 .16-.15.4-.47.71L127.08 20l7.13 8c.27.36.43.59.43.75 0 .39-.32.59-1 .59h-1.24c-.71 0-.71 0-1.14-.51l-6.14-6.92-.71.71v5.7c0 .9-.12 1-1 1h-.75c-.91 0-1-.12-1-1V1.68c0-.9.12-1 1-1h.75c.9 0 1 .12 1 1V19z"
+                                    transform="translate(-.31 -.22)"></path>
+                            </g>
+                            <g class="svgLogo">
+                                <g mask="url(#mask)">
+                                    <path id="Fill-68" class="cls-2"
+                                        d="M19.51.22a.83.83 0 0 0-.32.2l-5.34 5.32a.84.84 0 0 0 0 1.19l5.34 5.32a.84.84 0 0 0 1.19 0l5.33-5.32a.84.84 0 0 0 0-1.19L20.38.42a.83.83 0 0 0-.32-.2h-.55z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-2-2)">
+                                    <path id="Fill-71" class="cls-2"
+                                        d="M19.19 27l-5.34 5.32a.83.83 0 0 0 0 1.18l5.34 5.33a.85.85 0 0 0 .25.17h.69a.85.85 0 0 0 .25-.17l5.33-5.33a.83.83 0 0 0 0-1.18L20.38 27a.82.82 0 0 0-.6-.25.81.81 0 0 0-.59.25"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-3)">
+                                    <path id="Fill-74" class="cls-2"
+                                        d="M32.49 13.69L27.15 19a.86.86 0 0 0 0 1.19l5.34 5.32a.84.84 0 0 0 1.19 0L39 20.2a.84.84 0 0 0 0-1.2l-5.33-5.32a.84.84 0 0 0-.59-.24.85.85 0 0 0-.6.24"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-4-2)">
+                                    <path id="Fill-77" class="cls-2"
+                                        d="M12.51 33.61L10.14 36a.59.59 0 0 0 .15 1l2 1a.52.52 0 0 0 .78-.52v-3.63c0-.28-.1-.43-.25-.43a.53.53 0 0 0-.35.19"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-5)">
+                                    <path id="Fill-80" class="cls-2"
+                                        d="M26.46 33.85v3.56a.52.52 0 0 0 .77.52l2.05-1a.59.59 0 0 0 .14-1l-2.37-2.36a.52.52 0 0 0-.34-.19c-.15 0-.25.15-.25.43"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-6-2)">
+                                    <path id="Fill-83" class="cls-2"
+                                        d="M27.3 26.27a.84.84 0 0 0-.84.83v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .89-.84v-4.8a.84.84 0 0 0-.84-.83H27.3z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-7)">
+                                    <path id="Fill-86" class="cls-2"
+                                        d="M36.19 10l-2.38 2.37c-.32.32-.21.59.25.59h3.57a.53.53 0 0 0 .52-.78l-1-2a.62.62 0 0 0-.54-.36.65.65 0 0 0-.45.21"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-8-2)">
+                                    <path id="Fill-89" class="cls-2"
+                                        d="M26.46 1.8v3.56c0 .46.26.57.59.25l2.37-2.37a.59.59 0 0 0-.14-1l-2.05-1a.55.55 0 0 0-.23-.01.5.5 0 0 0-.5.57"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-9)">
+                                    <path id="Fill-92" class="cls-2"
+                                        d="M2.39 10.14l-1 2a.52.52 0 0 0 .52.78H5.5c.47 0 .58-.27.25-.59L3.38 10a.65.65 0 0 0-.46-.21.59.59 0 0 0-.53.36"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-10-2)">
+                                    <path id="Fill-95" class="cls-2"
+                                        d="M7.46 6.47a.85.85 0 0 0-.84.84v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .84-.84v-4.8a.85.85 0 0 0-.84-.84H7.46z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-11)">
+                                    <path id="Fill-98" class="cls-2"
+                                        d="M12.33 1.29l-2 1a.59.59 0 0 0-.15 1l2.37 2.37c.33.32.6.21.6-.25V1.8a.51.51 0 0 0-.5-.57.74.74 0 0 0-.28.06"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-12-2)">
+                                    <path id="Fill-101" class="cls-2"
+                                        d="M34.06 26.27c-.46 0-.57.26-.25.59l2.38 2.37a.6.6 0 0 0 1-.15l1-2a.52.52 0 0 0-.52-.77h-3.61z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-13)">
+                                    <path id="Fill-104" class="cls-2"
+                                        d="M7.46 26.27a.84.84 0 0 0-.84.83v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .84-.84v-4.8a.84.84 0 0 0-.84-.83H7.46z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-14-2)">
+                                    <path id="Fill-107" class="cls-2"
+                                        d="M1.94 26.27a.52.52 0 0 0-.52.77l1 2a.59.59 0 0 0 1 .15l2.37-2.37c.33-.33.22-.59-.25-.59h-3.6z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-15)">
+                                    <path id="Fill-110" class="cls-2"
+                                        d="M27.3 6.47a.85.85 0 0 0-.84.84v4.8a.85.85 0 0 0 .84.84h4.81a.85.85 0 0 0 .84-.84v-4.8a.85.85 0 0 0-.84-.84H27.3z"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                                <g mask="url(#mask-16-2)">
+                                    <path id="Fill-113" class="cls-2"
+                                        d="M5.89 13.69L.55 19a.84.84 0 0 0 0 1.19l5.34 5.32a.84.84 0 0 0 1.19 0l5.33-5.32a.84.84 0 0 0 0-1.19l-5.33-5.31a.85.85 0 0 0-.6-.24.84.84 0 0 0-.59.24"
+                                        transform="translate(-.31 -.22)"></path>
+                                </g>
+                            </g>
+                            <path id="Fill-116" class="cls-2"
+                                d="M134.82 13.78h.09c.1 0 .18 0 .18-.12s-.05-.12-.17-.12h-.1zm0 .45h-.18v-.8h.3a.46.46 0 0 1 .28.06.21.21 0 0 1 .08.17.21.21 0 0 1-.17.19c.08 0 .12.08.15.19a.51.51 0 0 0 .06.2h-.2a.47.47 0 0 1-.06-.2.15.15 0 0 0-.17-.12h-.09zm-.49-.42a.62.62 0 0 0 .62.64.64.64 0 0 0 0-1.27.62.62 0 0 0-.62.63zm1.43 0a.8.8 0 0 1-.81.81.81.81 0 0 1-.82-.81.8.8 0 0 1 .82-.79.79.79 0 0 1 .81.79z"
+                                transform="translate(-.31 -.22)"></path>
+                        </g>
+                    </svg>
+                </div>
+                <div class="card-header-text">
+                    Suggested Subscriptions 
+                </div>
+            </div>
+
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>5GB Subscriptions</th>
+                        <th>20GB Subscriptions</th>
+                        <th>50GB Subscriptions</th>
+                        <th>Unlimited Subscriptions</th>
+                        <th>Total Amount of Users</th>
+                        <th>Total Amount of Storage</th>
+                        
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>$FiveGBPacks Subscriptions, $FiveGBUsers Users</td>
+                        <td>$TwentyGBPacks Subscriptions, $TwentyGBUsers Users</td>
+                        <td>$FiftyGBPacks Subscriptions, $FiftyGBUsers Users</td>
+                        <td>$UnlimitedGBPacks Subscriptions, $UnlimitedGBUsers Users</td>
+                        <td>$TotalAmountUsers </td>
+                        <td>$TotalAmountStorage GB</td>
+
+                    </tr>
+
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+
+
+
+
     <footer>
-        <p style="color:#D3D3D3;text-align:right;padding-right: 10px;">$Version</p>
+        <p style="color:#D3D3D3;text-align:right;padding-right: 10px;"<td>$CurrentDate $Version</td>
     </footer>
 </body>
 
 </html>             
 "@
+
+
+
+
 #endregion
 
 #region Start-RobustCloudCommand

@@ -5,7 +5,7 @@
 
 ```
 PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
-[INFO] Starting the Rubrik Microsoft 365 sizing script (v2.1).
+[INFO] Starting the Rubrik Microsoft 365 sizing script (v3.3).
 [INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions.
 [INFO] Retrieving the Total Storage Consumed for ...
  - Exchange
@@ -94,4 +94,5 @@ The only downside of this approach is that the Usage reports do not contain any 
 
 ## Example Output
 
-![Rubrik Sizing HTML Output](https://user-images.githubusercontent.com/8610203/135927453-14334d14-886b-4000-b749-93934d341bd9.png)
+![image](https://user-images.githubusercontent.com/51362633/172713634-4de3cf3e-acb7-4c2c-8193-3814a6a32df4.png)
+
