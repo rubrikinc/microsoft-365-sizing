@@ -523,6 +523,7 @@ $Calculate_Storage_Required=[math]::ceiling($($M365Sizing[4].OneYearInGB))
 # Query M365Licsolver Azure Function
 # If less than 76GB Average per user then query the azure function that calculates the best mix of subscription types. If more than 76 then Unlimited is the best option.
 if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
+    # Query the M365Licsolver Azure Function
     $SolverQuery = ‘{“users”:“‘+$Calculate_Users_Required+‘“,”data”:“‘+$Calculate_Storage_Required+‘“}’
     try {
         $APIReturn = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $SolverQuery -Method ‘POST’)
