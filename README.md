@@ -94,5 +94,6 @@ The only downside of this approach is that the Usage reports do not contain any 
 
 ## Example Output
 
-![image](https://user-images.githubusercontent.com/51362633/172713634-4de3cf3e-acb7-4c2c-8193-3814a6a32df4.png)
+![image](https://user-images.githubusercontent.com/51362633/173459068-af6ef0c6-3a4c-4cc1-8c75-9a01c6771c91.png)
+
 
