@@ -523,6 +523,7 @@ $Calculate_Storage_Required=[math]::ceiling($($M365Sizing[4].OneYearInGB))
 # Query M365Licsolver Azure Function
 # If less than 76GB Average per user then query the azure function that calculates the best mix of subscription types. If more than 76 then Unlimited is the best option.
 if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
+
     # Query the M365Licsolver Azure Function
     $SolverQuery = '{"users":"' + $Calculate_Users_Required + '","data":"' + $Calculate_Storage_Required + '"}'
     try {
@@ -1156,6 +1157,63 @@ $HTML_CODE=@"
     </div>
 
 
+    <!-- Total Data Needed -->
+    <div class="card-container">
+        <div class="card">
+            <div class="card-header ">
+
+            
+            
+                <div class="M365">
+                
+
+                <svg xmlns="http://www.w3.org/2000/svg" height="62" width="70" viewBox="0 0 278050 333334" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd">
+                <path fill="#ea3e23" d="M278050 305556l-29-16V28627L178807 0 448 66971l-448 87 22 200227 60865-23821V80555l117920-28193-17 239519L122 267285l178668 65976v73l99231-27462v-316z"/></svg>
+
+                
+
+                </div>
+                <div class="card-header-text">
+                    Discovery Summary
+                </div>
+            </div>
+
+
+
+
+    <!-- Licensing -->
+    <!-- <div class="card-container">
+        <div class="card">
+            <h1>Licensing</h1>
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Number of Users</th>
+                        <th>Total Size (GB)</th>
+                        <th>Per User Size (GB)</th>
+                        <th>Average Growth Forecast (Yearly)</th>
+                        <th>One Year Storage Forecast (GB)</th>
+                        <th>Three Year Storage Forecast (GB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>296</td>
+                        <td>1.26</td>
+                        <td>0</td>
+                        <td>8</td>
+                        <td>1.3608</td>
+                        <td>1.5624</td>
+
+                    </tr>
+
+                    
+    </tbody>
+    </table>
+    </div>
+    </div>
+
+
 
 
     <!-- Subscription Output -->
@@ -1439,7 +1497,10 @@ $HTML_CODE=@"
                     </svg>
                 </div>
                 <div class="card-header-text">
-                    License Recommendations  
+
+                    License Recommendation 
+
+       
                 </div>
             </div>
 
