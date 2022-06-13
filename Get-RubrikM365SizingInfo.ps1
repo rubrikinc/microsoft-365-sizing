@@ -523,6 +523,8 @@ $Calculate_Storage_Required=[math]::ceiling($($M365Sizing[4].OneYearInGB))
 # Query M365Licsolver Azure Function
 # If less than 76GB Average per user then query the azure function that calculates the best mix of subscription types. If more than 76 then Unlimited is the best option.
 if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
+
+    # Query the M365Licsolver Azure Function
     $SolverQuery = '{"users":"' + $Calculate_Users_Required + '","data":"' + $Calculate_Storage_Required + '"}'
     try {
         $APIReturn = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $SolverQuery -Method ‘POST’)
@@ -1154,6 +1156,7 @@ $HTML_CODE=@"
     </div>
     </div>
 
+
     <!-- Total Data Needed -->
     <div class="card-container">
         <div class="card">
@@ -1175,31 +1178,8 @@ $HTML_CODE=@"
                 </div>
             </div>
 
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>Required Number of Licenses</th>
-                        <th>One Year Storage Forecast</th>
-                        <th>Three Year Storage Forecast</th>
-                        
-
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>$UserLicensesRequired</td>
-                        <td>$($M365Sizing[4].OneYearInGB) GB</td>
-                        <td>$($M365Sizing[4].ThreeYearInGB) GB</td>
-                 
 
 
-                    </tr>
-
-                    
-                </tbody>
-            </table>
-        </div>
-    </div>
 
     <!-- Licensing -->
     <!-- <div class="card-container">
@@ -1517,7 +1497,10 @@ $HTML_CODE=@"
                     </svg>
                 </div>
                 <div class="card-header-text">
+
                     License Recommendation 
+
+       
                 </div>
             </div>
 
