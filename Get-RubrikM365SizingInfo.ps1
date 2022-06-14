@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.4"
+$Version = "v3.5"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -1176,7 +1176,33 @@ $HTML_CODE=@"
                 <div class="card-header-text">
                     Discovery Summary
                 </div>
+                </div>
+
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>Required Number of Licenses</th>
+                            <th>One Year Storage Forecast</th>
+                            <th>Three Year Storage Forecast</th>
+                            
+    
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>$UserLicensesRequired</td>
+                            <td>$($M365Sizing[4].OneYearInGB) GB</td>
+                            <td>$($M365Sizing[4].ThreeYearInGB) GB</td>
+                     
+    
+    
+                        </tr>
+    
+                        
+                    </tbody>
+                </table>
             </div>
+        </div>
 
 
 
