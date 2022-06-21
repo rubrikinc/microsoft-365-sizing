@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.5"
+$Version = "v3.6"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -1719,7 +1719,7 @@ Executes the script to gather EAS Device statistics and output them to a csv fil
     $InformationPreference = "Continue"
     $Global:ErrorActionPreference = "Stop"
     Write-Log ("Error Action Preference: " + $Global:ErrorActionPreference)
-    Write-Loug ("Information Preference: " + $InformationPreference)
+    Write-Log ("Information Preference: " + $InformationPreference)
 
     # Log the script block for debugging purposes
     Write-log $ScriptBlock
