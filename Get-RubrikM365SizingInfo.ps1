@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.6"
+$Version = "v3.7"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -188,7 +188,14 @@ if ($AzureAdRequired) {
 
 
 Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' (if filtering results by Azure AD Group) permissions."
-Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All","Group.Read.All"  | Out-Null
+try {
+    Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All","Group.Read.All"  | Out-Null
+}
+catch {
+    $errorException = $_.Exception
+    $errorMessage = $errorException.Message
+    Write-Output "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
+}
 
 Write-Output "[INFO] Looking up all users in the provided Azure AD Group."
 if ($AzureAdRequired) {
