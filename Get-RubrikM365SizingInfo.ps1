@@ -32,7 +32,7 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.4"
+$Version = "v3.8"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -188,7 +188,14 @@ if ($AzureAdRequired) {
 
 
 Write-Output "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' (if filtering results by Azure AD Group) permissions."
-Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All","Group.Read.All"  | Out-Null
+try {
+    Connect-MgGraph -Scopes "Reports.Read.All","User.Read.All","Group.Read.All"  | Out-Null
+}
+catch {
+    $errorException = $_.Exception
+    $errorMessage = $errorException.Message
+    Write-Output "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
+}
 
 Write-Output "[INFO] Looking up all users in the provided Azure AD Group."
 if ($AzureAdRequired) {
@@ -527,7 +534,7 @@ if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
     # Query the M365Licsolver Azure Function
     $SolverQuery = '{"users":"' + $Calculate_Users_Required + '","data":"' + $Calculate_Storage_Required + '"}'
     try {
-        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $SolverQuery -Method ‘POST’)
+        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest 'https://m365licsolver-azure.azurewebsites.net:/api/httpexample' -ContentType "application/json" -Body $SolverQuery -Method 'POST')
     }
     catch {
         $errorMessage = $_.Exception | Out-String
@@ -1176,7 +1183,33 @@ $HTML_CODE=@"
                 <div class="card-header-text">
                     Discovery Summary
                 </div>
+                </div>
+
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>Required Number of Licenses</th>
+                            <th>One Year Storage Forecast</th>
+                            <th>Three Year Storage Forecast</th>
+                            
+    
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>$UserLicensesRequired</td>
+                            <td>$($M365Sizing[4].OneYearInGB) GB</td>
+                            <td>$($M365Sizing[4].ThreeYearInGB) GB</td>
+                     
+    
+    
+                        </tr>
+    
+                        
+                    </tbody>
+                </table>
             </div>
+        </div>
 
 
 
@@ -1693,7 +1726,7 @@ Executes the script to gather EAS Device statistics and output them to a csv fil
     $InformationPreference = "Continue"
     $Global:ErrorActionPreference = "Stop"
     Write-Log ("Error Action Preference: " + $Global:ErrorActionPreference)
-    Write-Loug ("Information Preference: " + $InformationPreference)
+    Write-Log ("Information Preference: " + $InformationPreference)
 
     # Log the script block for debugging purposes
     Write-log $ScriptBlock
