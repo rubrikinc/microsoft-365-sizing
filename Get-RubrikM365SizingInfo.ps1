@@ -32,7 +32,8 @@ param (
 )
 
 $Period = '180'
-$Version = "v3.7"
+
+$Version = "v3.8"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -534,7 +535,7 @@ if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
     # Query the M365Licsolver Azure Function
     $SolverQuery = '{"users":"' + $Calculate_Users_Required + '","data":"' + $Calculate_Storage_Required + '"}'
     try {
-        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest ‘https://m365licsolver-azure.azurewebsites.net:/api/httpexample’ -ContentType “application/json” -Body $SolverQuery -Method ‘POST’)
+        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest 'https://m365licsolver-azure.azurewebsites.net:/api/httpexample' -ContentType "application/json" -Body $SolverQuery -Method 'POST')
     }
     catch {
         $errorMessage = $_.Exception | Out-String
