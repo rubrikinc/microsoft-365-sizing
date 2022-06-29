@@ -32,6 +32,7 @@ param (
 )
 
 $Period = '180'
+
 $Version = "v3.8"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
