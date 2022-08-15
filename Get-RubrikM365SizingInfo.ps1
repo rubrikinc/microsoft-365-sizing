@@ -33,7 +33,7 @@ param (
 
 $Period = '180'
 
-$Version = "v3.8"
+$Version = "v3.9"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -94,11 +94,22 @@ function Measure-AverageGrowth {
         if ($Record -eq 1){
             $StorageUsed = $Item."Storage Used (Byte)"
         }else {
-            $StorageUsage += (
-                New-Object psobject -Property @{
-                    Growth =  [math]::Round(((($Item.'Storage Used (Byte)' / $StorageUsed) -1) * 100),2)
-                }
-            )
+
+            if ( $StorageUsed -eq 0 ) { 
+                $StorageUsage += (
+                    New-Object psobject -Property @{
+                        Growth =  0
+                    }
+                 )
+            } else {
+
+                $StorageUsage += (
+                    New-Object psobject -Property @{
+                        Growth =  [math]::Round(((($Item.'Storage Used (Byte)' / $StorageUsed) -1) * 100),2)
+                    }
+                )
+                
+            }
             $StorageUsed = $Item."Storage Used (Byte)"
         }
         $Record = $Record + 1
