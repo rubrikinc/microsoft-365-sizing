@@ -33,7 +33,7 @@ param (
 
 $Period = '180'
 
-$Version = "v3.9"
+$Version = "v3.10"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -538,6 +538,7 @@ if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
 
 $Calculate_Users_Required=[math]::ceiling($UserLicensesRequired)
 $Calculate_Storage_Required=[math]::ceiling($($M365Sizing[4].OneYearInGB))
+$Calculated_Per_User_Size=[math]::round($($M365Sizing[4].OneYearInGB)/$UserLicensesRequired,2)
 
 # Query M365Licsolver Azure Function
 # If less than 76GB Average per user then query the azure function that calculates the best mix of subscription types. If more than 76 then Unlimited is the best option.
@@ -1186,7 +1187,7 @@ $HTML_CODE=@"
                 <div class="M365">
                 
 
-                <svg xmlns="http://www.w3.org/2000/svg" height="62" width="70" viewBox="0 0 278050 333334" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd">
+                <svg xmlns="http://www.w3.org/2000/svg" height="72" width="72" viewBox="-8 -35000 278050 403334" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd">
                 <path fill="#ea3e23" d="M278050 305556l-29-16V28627L178807 0 448 66971l-448 87 22 200227 60865-23821V80555l117920-28193-17 239519L122 267285l178668 65976v73l99231-27462v-316z"/></svg>
 
                 
@@ -1201,6 +1202,7 @@ $HTML_CODE=@"
                     <thead>
                         <tr>
                             <th>Required Number of Licenses</th>
+                            <th>Per User Size (Year One)</th>
                             <th>One Year Storage Forecast</th>
                             <th>Three Year Storage Forecast</th>
                             
@@ -1210,6 +1212,7 @@ $HTML_CODE=@"
                     <tbody>
                         <tr>
                             <td>$UserLicensesRequired</td>
+                            <td>$Calculated_Per_User_Size GB</td>
                             <td>$($M365Sizing[4].OneYearInGB) GB</td>
                             <td>$($M365Sizing[4].ThreeYearInGB) GB</td>
                      
