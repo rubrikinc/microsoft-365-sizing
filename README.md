@@ -4,9 +4,10 @@
 
 
 ```
-PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
-[INFO] Starting the Rubrik Microsoft 365 sizing script (v3.3).
-[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All' permissions.
+Get-RubrikM365SizingInfo.ps1
+[INFO] Starting the Rubrik Microsoft 365 sizing script (v3.11).
+[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' (if filtering results by Azure AD Group) permissions.
+[INFO] Looking up all users in the provided Azure AD Group.
 [INFO] Retrieving the Total Storage Consumed for ...
  - Exchange
  - SharePoint
@@ -14,16 +15,31 @@ PS ~/Development/microsoft-365-sizing> ./Get-RubrikM365SizingInfo.ps1
 [INFO] Retrieving the Average Storage Growth Forecast for ...
  - Exchange
  - SharePoint
- - OneDrive                                                                            
-[INFO] Retrieving the subscription License details.                                                                       
-[INFO] Disconnecting from the Microsoft Graph API.                                                                        
-[INFO] Connecting to the Microsoft Exchange Online Module.                                                                
-[INFO] Retrieving all In-Place Archive Exchange Mailbox sizing information.
-[INFO] Retrieving Exchange Mailbox Shared Mailbox information.                                                                                                                                                        
-[INFO] Disconnecting from the Microsoft Exchange Online Module
-[INFO] Calculating the forecasted total storage need for Rubrik.     
+ - OneDrive
+[INFO] Disconnecting from the Microsoft Graph API.
 
-M365 Sizing information has been written to ~/Development/microsoft-365-sizing/Rubrik-MS365-Sizing.html   
+ClientId              : xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+TenantId              : xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+CertificateThumbprint : 
+Scopes                : {Application.ReadWrite.All, AppRoleAssignment.ReadWrite.All, Group.Read.All, openid…}
+AuthType              : Delegated
+AuthProviderType      : InteractiveAuthenticationProvider
+CertificateName       : 
+Account               : xxx.yyyyy@zzzzzzzzzzz.com
+AppName               : Microsoft Graph PowerShell
+ContextScope          : CurrentUser
+Certificate           : 
+PSHostVersion         : 7.2.6
+ClientTimeout         : 00:05:00
+
+[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities.
+[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing.
+[INFO] Retrieving Exchange Mailbox Shared Mailbox sizing.
+[INFO] Disconnecting from the Microsoft Exchange Online Module
+[INFO] Calculating the forecasted total storage need for Rubrik.
+
+
+M365 Sizing information has been written to /dev/Rubrik-M365-Sizing.html
 ```
 
 ## Requirements
