@@ -33,7 +33,7 @@ param (
 
 $Period = '180'
 
-$Version = "v3.10"
+$Version = "v3.11"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -547,7 +547,7 @@ if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
     # Query the M365Licsolver Azure Function
     $SolverQuery = '{"users":"' + $Calculate_Users_Required + '","data":"' + $Calculate_Storage_Required + '"}'
     try {
-        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest 'https://m365licsolver-azure.azurewebsites.net:/api/httpexample' -ContentType "application/json" -Body $SolverQuery -Method 'POST')
+        $APIReturn = ConvertFrom-JSON (Invoke-WebRequest 'https://m365licsolver-azure.azurewebsites.net:/api/httpexample' -ContentType "application/json" -Body $SolverQuery -UseBasicParsing -Method 'POST')
     }
     catch {
         $errorMessage = $_.Exception | Out-String
@@ -950,14 +950,9 @@ $HTML_CODE=@"
                         transform="translate(-.31 -.22)"></path>
                 </g>
             </svg>
-
-
         </div>
-
         <div class="nav-bar-text">Microsoft 365 Sizing</div>
-
     </div>
-
     <div class="margin"></div>
 
     <!-- Exchange Mailbox -->
@@ -965,8 +960,6 @@ $HTML_CODE=@"
         <div class="card">
             <div class="card-header">
                 <div>
-
-
                     <svg xmlns="http://www.w3.org/2000/svg" height="62" width="auto" viewBox="-8.24997 -12 71.49974 72">
                         <path fill="#28a8ea"
                             d="M51.5095 0h-12.207a3.4884 3.4884 0 00-2.4677 1.0225L8.0222 29.835a3.4884 3.4884 0 00-1.0224 2.4677v12.207A3.49 3.49 0 0010.49 48h12.207a3.4884 3.4884 0 002.4678-1.0225l28.813-28.8125a3.49 3.49 0 001.022-2.4677V3.4903A3.49 3.49 0 0051.5095 0z" />
@@ -1011,10 +1004,7 @@ $HTML_CODE=@"
                         <td>$($M365Sizing[0].AverageGrowthPercentage)%</td>
                         <td>$($M365Sizing[0].OneYearStorageForecastInGB) GB</td>
                         <td>$($M365Sizing[0].ThreeYearStorageForecastInGB) GB</td>
-
                     </tr>
-
-                    
                 </tbody>
             </table>
         </div>
@@ -1025,7 +1015,6 @@ $HTML_CODE=@"
         <div class="card">
             <div class="card-header">
                 <div>
-
                     <svg xmlns="http://www.w3.org/2000/svg" height="62" width="auto"
                         viewBox="-154.5063 -164.9805 1339.0546 989.883">
                         <path
@@ -1066,10 +1055,7 @@ $HTML_CODE=@"
                         <td>$($M365Sizing[1].AverageGrowthPercentage)%</td>
                         <td>$($M365Sizing[1].OneYearStorageForecastInGB) GB</td>
                         <td>$($M365Sizing[1].ThreeYearStorageForecastInGB) GB</td>
-
                     </tr>
-
-                    
                 </tbody>
             </table>
         </div>
@@ -1137,61 +1123,18 @@ $HTML_CODE=@"
                         <td>$($M365Sizing[2].OneYearStorageForecastInGB) GB</td>
                         <td>$($M365Sizing[2].ThreeYearStorageForecastInGB) GB</td>
                     </tr>
-
-                    
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Licensing -->
-    <!-- <div class="card-container">
-        <div class="card">
-            <h1>Licensing</h1>
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>Number of Users</th>
-                        <th>Total Size (GB)</th>
-                        <th>Per User Size (GB)</th>
-                        <th>Average Growth Forecast (Yearly)</th>
-                        <th>One Year Storage Forecast (GB)</th>
-                        <th>Three Year Storage Forecast (GB)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>296</td>
-                        <td>1.26</td>
-                        <td>0</td>
-                        <td>8</td>
-                        <td>1.3608</td>
-                        <td>1.5624</td>
-
-                    </tr>
-
-                    
-    </tbody>
-    </table>
-    </div>
-    </div>
-
-
     <!-- Total Data Needed -->
     <div class="card-container">
         <div class="card">
             <div class="card-header ">
-
-            
-            
                 <div class="M365">
-                
-
                 <svg xmlns="http://www.w3.org/2000/svg" height="72" width="72" viewBox="-8 -35000 278050 403334" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd">
                 <path fill="#ea3e23" d="M278050 305556l-29-16V28627L178807 0 448 66971l-448 87 22 200227 60865-23821V80555l117920-28193-17 239519L122 267285l178668 65976v73l99231-27462v-316z"/></svg>
-
-                
-
                 </div>
                 <div class="card-header-text">
                     Discovery Summary
@@ -1205,8 +1148,6 @@ $HTML_CODE=@"
                             <th>Per User Size (Year One)</th>
                             <th>One Year Storage Forecast</th>
                             <th>Three Year Storage Forecast</th>
-                            
-    
                         </tr>
                     </thead>
                     <tbody>
@@ -1215,69 +1156,23 @@ $HTML_CODE=@"
                             <td>$Calculated_Per_User_Size GB</td>
                             <td>$($M365Sizing[4].OneYearInGB) GB</td>
                             <td>$($M365Sizing[4].ThreeYearInGB) GB</td>
-                     
-    
-    
                         </tr>
-    
-                        
                     </tbody>
                 </table>
             </div>
         </div>
-
-
-
-
-    <!-- Licensing -->
-    <!-- <div class="card-container">
-        <div class="card">
-            <h1>Licensing</h1>
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>Number of Users</th>
-                        <th>Total Size (GB)</th>
-                        <th>Per User Size (GB)</th>
-                        <th>Average Growth Forecast (Yearly)</th>
-                        <th>One Year Storage Forecast (GB)</th>
-                        <th>Three Year Storage Forecast (GB)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>296</td>
-                        <td>1.26</td>
-                        <td>0</td>
-                        <td>8</td>
-                        <td>1.3608</td>
-                        <td>1.5624</td>
-
-                    </tr>
-
-                    
-    </tbody>
-    </table>
-    </div>
-    </div>
-
-
-
 
     <!-- Subscription Output -->
     <div class="card-container">
         <div class="card">
             <div class="card-header ">
                 <div class="rubrik-snowflake">
-
-
                     <svg xmlns="http://www.w3.org/2000/svg" height="52" width="auto" viewBox="0 0 50 38.77">
                         <defs>
                             <style>
                                 .cls-1 {
                                     fill: #fff
                                 }
-
                                 .cls-1,
                                 .cls-2 {
                                     fill-rule: evenodd
@@ -1546,9 +1441,8 @@ $HTML_CODE=@"
                 </div>
                 <div class="card-header-text">
 
-                    License Recommendation 
+                    License Option 
 
-       
                 </div>
             </div>
 
@@ -1559,9 +1453,6 @@ $HTML_CODE=@"
                         <th>Foundation (20GB)</th>
                         <th>Business (50GB)</th>
                         <th>Enterprise (Unlimited)</th>
-                     
-                        
-
                     </tr>
                 </thead>
                 <tbody>
@@ -1570,30 +1461,17 @@ $HTML_CODE=@"
                         <td>$TwentyGBUsers</td>
                         <td>$FiftyGBUsers</td>
                         <td>$UnlimitedGBUsers </td>
-                     
-
                     </tr>
-
-                    
                 </tbody>
             </table>
         </div>
     </div>
-
-
-
-
-
-
     <footer>
         <p style="color:#D3D3D3;text-align:right;padding-right: 10px;"<td>$CurrentDate $Version</td>
     </footer>
 </body>
-
 </html>             
 "@
-
-
 
 
 #endregion
