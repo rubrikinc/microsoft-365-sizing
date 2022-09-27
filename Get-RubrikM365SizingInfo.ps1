@@ -33,7 +33,7 @@ param (
 
 $Period = '180'
 
-$Version = "v3.11"
+$Version = "v3.12"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -581,7 +581,14 @@ if (($Calculate_Storage_Required)/$Calculate_Users_Required -le 76) {
 #region HTML Code for Output
 $HTML_CODE=@"                            
 <!DOCTYPE html>
+
 <html>
+<!---->
+<!---->
+<!-- User Mailbox Count: $($M365Sizing.Exchange.NumberOfUsers) -->
+<!-- Shared Mailbox Count: $($SharedMailboxesCount) -->
+<!---->
+<!---->
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 
 <head>
