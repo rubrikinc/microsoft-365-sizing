@@ -33,7 +33,7 @@ param (
 
 $Period = '180'
 
-$Version = "v3.12"
+$Version = "v3.13"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
