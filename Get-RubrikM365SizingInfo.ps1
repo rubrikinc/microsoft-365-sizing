@@ -130,7 +130,6 @@ function ProcessUsageReport {
         [string]$Section
     )
 
-
     $ReportDetail = Import-Csv -Path $ReportCSV | Where-Object {$_.'Is Deleted' -eq 'FALSE'}
     if (($AzureAdRequired) -and ($Section -ne "SharePoint")) {
         # The OneDrive and Exchange Usage reports have different column names that need to be accounted for.
@@ -230,7 +229,7 @@ if ($AzureAdRequired) {
          }
      }
 
-    
+     
      Write-Output "[INFO] Discovered $($AzureAdGroupMembersByUserPrincipalName.Count) users in the provided Azure AD Group."
 }
 
@@ -312,7 +311,6 @@ foreach($Section in $UsageDetailReports.Keys){
     Write-Output " - $Section"
     $ReportCSV = Get-MgReport -ReportName $UsageDetailReports[$Section] -Period $Period
     ProcessUsageReport -ReportCSV $ReportCSV -ReportName $UsageDetailReports[$Section] -Section $Section
-    Remove-Item -Path $ReportCSV
 }
 
 #endregion
@@ -335,7 +333,7 @@ foreach($Section in $StorageUsageReports.Keys){
     $ReportCSV = Get-MgReport -ReportName $StorageUsageReports[$Section] -Period $Period
     $AverageGrowth = Measure-AverageGrowth -ReportCSV $ReportCSV -ReportName $StorageUsageReports[$Section]
     $M365Sizing.$($Section).AverageGrowthPercentage = [math]::Round($AverageGrowth,2)
-    Remove-Item -Path $ReportCSV
+    # Remove-Item -Path $ReportCSV
 }
 
 
@@ -377,7 +375,17 @@ $ArchiveMailboxSizeGb = 0
 $LargeAmountofArchiveMailboxCount = 5000
 try {
     
-    $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited
+    if ($AzureAdRequired){
+        $ArchiveMailboxes = @()    
+        foreach($AdGroupUser in $AzureAdGroupMembersByUserPrincipalName){
+              $ArchiveMailboxes += Get-ExoMailbox -Archive -Identity $AdGroupUser
+        }
+       
+    } else {
+        $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited
+    }
+  
+
     $ArchiveMailboxesCount = @($ArchiveMailboxes).Count
 
     $ArchiveMailboxesFolders = @()
