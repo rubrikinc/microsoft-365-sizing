@@ -333,7 +333,7 @@ foreach($Section in $StorageUsageReports.Keys){
     $ReportCSV = Get-MgReport -ReportName $StorageUsageReports[$Section] -Period $Period
     $AverageGrowth = Measure-AverageGrowth -ReportCSV $ReportCSV -ReportName $StorageUsageReports[$Section]
     $M365Sizing.$($Section).AverageGrowthPercentage = [math]::Round($AverageGrowth,2)
-    # Remove-Item -Path $ReportCSV
+    Remove-Item -Path $ReportCSV
 }
 
 
