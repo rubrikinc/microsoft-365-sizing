@@ -540,7 +540,7 @@ foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 if ($SharedMailboxesCount -gt $M365Sizing.Exchange.NumberOfUsers){
     Write-Output "[INFO] Detected more Shared Mailboxes than User Mailboxes. Automatically updating license count requirements."
     $M365Sizing.Exchange.NumberOfUsers = $SharedMailboxesCount
-    $ExchangeHTMLTitle = "Users + Shared Mailbox"
+    $ExchangeHTMLTitle = "Users / Shared Mailbox"
 }  else {
     $ExchangeHTMLTitle = "Users"
 }
