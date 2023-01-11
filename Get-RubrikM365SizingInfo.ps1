@@ -33,7 +33,7 @@ param (
 
 $Period = '180'
 
-$Version = "v3.13"
+$Version = "v3.14"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -231,6 +231,10 @@ if ($AzureAdRequired) {
 
      
      Write-Output "[INFO] Discovered $($AzureAdGroupMembersByUserPrincipalName.Count) users in the provided Azure AD Group."
+
+     if ($AzureAdGroupMembersByUserPrincipalName.Count -eq 0) {
+        throw "The Azure AD Group '$AzureAdGroupName' does not contain any User Principal Names."
+    }
 }
 
 
@@ -536,7 +540,10 @@ foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
 if ($SharedMailboxesCount -gt $M365Sizing.Exchange.NumberOfUsers){
     Write-Output "[INFO] Detected more Shared Mailboxes than User Mailboxes. Automatically updating license count requirements."
     $M365Sizing.Exchange.NumberOfUsers = $SharedMailboxesCount
-} 
+    $ExchangeHTMLTitle = "Users + Shared Mailbox"
+}  else {
+    $ExchangeHTMLTitle = "Users"
+}
 
 if ($M365Sizing.Exchange.NumberOfUsers -gt $M365Sizing.OneDrive.NumberOfUsers){
     $UserLicensesRequired = $M365Sizing.Exchange.NumberOfUsers
@@ -1003,7 +1010,7 @@ $HTML_CODE=@"
             <table class="styled-table">
                 <thead>
                     <tr>
-                        <th>Number of Users</th>
+                        <th>Number of $($ExchangeHTMLTitle)</th>
                         <th>Total Size</th>
                         <th>Per User Size</th>
                         <th>Average Growth Forecast (Yearly)</th>
