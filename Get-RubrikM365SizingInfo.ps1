@@ -28,6 +28,8 @@ param (
     # Parameter help description
     [Parameter()]
     [String]$AzureAdGroupName,
+    [Parameter()]
+    [bool]$SkipSharedMailbox = $false,
     $OutputObject
 )
 
@@ -452,68 +454,74 @@ $SkipInternval = $FirstInterval
 $SharedMailboxesSizeGb = 0
 $LargeAmountofSharedMailboxCount = 5000
 
-try {
-    # Process the first N number of Shared Mailboxes. Where N = $FirstInterval
-    $SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited
-    $SharedMailboxesCount = @($SharedMailboxes).Count
-    
-    
-    $SharedMailboxeFirstInterval = $SharedMailboxes | Select-Object -First $FirstInterval
-    if ($SharedMailboxesCount -le $LargeAmountofSharedMailboxCount) {
-        $SharedMailboxesSize += $SharedMailboxeFirstInterval | Get-ExoMailboxStatistics | Select-Object TotalItemSize     
-
-    } else {
-        Write-Output "[INFO] Detected a large number of Shared Mailboxes. Implementing additional logic to account for Microsoft API performance limits. This may take some time."
-        Write-Output ""
-        if ($ManualUserPrincipalName -eq $null) {
-            Write-Output ""
-            Write-Output $ActionRequiredLogMessage
-            Write-Output ""
-            $ManualUserPrincipalName = Read-Host -Prompt $ActionRequiredPromptMessage
-        }
-       
-        $SharedMailboxesSize +=  Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $SharedMailboxeFirstInterval -logfile "$systemTempFolder\sharedMailbox.log" -ScriptBlock {Get-ExoMailboxStatistics -Identity $input.UserPrincipalName | Select-Object TotalItemSize}
-        Write-Output ""
-    }
-
-    # Process any remaining Shared Mailboxes at the pre-defined $FirstInterval
-    if ($SharedMailboxesCount -ge $FirstInterval){
-
-
-        while($SharedMailboxesCount -ge 0)
-        {   
-            $SharedMailboxesCount = $SharedMailboxesCount - $FirstInterval
-            $SharedMailboxesSecondaryInterval = $SharedMailboxes | Select-Object -Skip $SkipInternval -First $FirstInterval
-            if ($SharedMailboxesCount -le $LargeAmountofSharedMailboxCount) {
-                $SharedMailboxesSize += $SharedMailboxesSecondaryInterval | Get-ExoMailboxStatistics| Select-Object TotalItemSize
+if ($SkipSharedMailbox -eq $false){
+    try {
+        # Process the first N number of Shared Mailboxes. Where N = $FirstInterval
+        $SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited
+        $SharedMailboxesCount = @($SharedMailboxes).Count
         
-            } else {
-                $SharedMailboxesSize +=  Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $SharedMailboxesSecondaryInterval -logfile "$systemTempFolder\sharedMailbox.log" -ScriptBlock {Get-ExoMailboxStatistics -Identity $input.UserPrincipalName| Select-Object TotalItemSize}
+        
+        $SharedMailboxeFirstInterval = $SharedMailboxes | Select-Object -First $FirstInterval
+        if ($SharedMailboxesCount -le $LargeAmountofSharedMailboxCount) {
+            $SharedMailboxesSize += $SharedMailboxeFirstInterval | Get-ExoMailboxStatistics | Select-Object TotalItemSize     
+
+        } else {
+            Write-Output "[INFO] Detected a large number of Shared Mailboxes. Implementing additional logic to account for Microsoft API performance limits. This may take some time."
+            Write-Output ""
+            if ($ManualUserPrincipalName -eq $null) {
                 Write-Output ""
+                Write-Output $ActionRequiredLogMessage
+                Write-Output ""
+                $ManualUserPrincipalName = Read-Host -Prompt $ActionRequiredPromptMessage
             }
+        
+            $SharedMailboxesSize +=  Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $SharedMailboxeFirstInterval -logfile "$systemTempFolder\sharedMailbox.log" -ScriptBlock {Get-ExoMailboxStatistics -Identity $input.UserPrincipalName | Select-Object TotalItemSize}
+            Write-Output ""
+        }
+
+        # Process any remaining Shared Mailboxes at the pre-defined $FirstInterval
+        if ($SharedMailboxesCount -ge $FirstInterval){
+
+
+            while($SharedMailboxesCount -ge 0)
+            {   
+                $SharedMailboxesCount = $SharedMailboxesCount - $FirstInterval
+                $SharedMailboxesSecondaryInterval = $SharedMailboxes | Select-Object -Skip $SkipInternval -First $FirstInterval
+                if ($SharedMailboxesCount -le $LargeAmountofSharedMailboxCount) {
+                    $SharedMailboxesSize += $SharedMailboxesSecondaryInterval | Get-ExoMailboxStatistics| Select-Object TotalItemSize
             
-            $SkipInternval = $SkipInternval + $FirstInterval
+                } else {
+                    $SharedMailboxesSize +=  Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $SharedMailboxesSecondaryInterval -logfile "$systemTempFolder\sharedMailbox.log" -ScriptBlock {Get-ExoMailboxStatistics -Identity $input.UserPrincipalName| Select-Object TotalItemSize}
+                    Write-Output ""
+                }
+                
+                $SkipInternval = $SkipInternval + $FirstInterval
+            }
+
+        }
+
+        # Remove the Start-RobustCloudCommand log file if it exists
+        Remove-Item -Path "$systemTempFolder\sharedMailbox.log" -ErrorAction SilentlyContinue
+
+        foreach($Folder in $SharedMailboxesSize){
+            $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
+            $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+            
+            $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+
+            $SharedMailboxesSizeGb += $FolderSizeInGb
         }
 
     }
-
-    # Remove the Start-RobustCloudCommand log file if it exists
-    Remove-Item -Path "$systemTempFolder\sharedMailbox.log" -ErrorAction SilentlyContinue
-
-    foreach($Folder in $SharedMailboxesSize){
-        $FolderSize = $Folder.TotalItemSize.Value.ToString().split("(") | Select-Object -Index 1
-        $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
-        
-        $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
-
-        $SharedMailboxesSizeGb += $FolderSizeInGb
+    catch {
+        $errorException = $_.Exception
+        $errorMessage = $errorException.Message
+        Write-Output "[ERROR] Unable to retrieve Shared Mailbox sizing. $errorMessage"
     }
-
-}
-catch {
-    $errorException = $_.Exception
-    $errorMessage = $errorException.Message
-    Write-Output "[ERROR] Unable to retrieve Shared Mailbox sizing. $errorMessage"
+    } else {
+        Write-Output "[WARNING] Skipping Shared Mailbox calculation."
+        $SharedMailboxesCount = 0
+        $SharedMailboxesSizeGb = 0
 }
 
 $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
