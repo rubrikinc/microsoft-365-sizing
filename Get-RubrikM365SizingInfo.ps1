@@ -30,12 +30,14 @@ param (
     [String]$AzureAdGroupName,
     [Parameter()]
     [bool]$SkipSharedMailbox = $false,
+    [Parameter()]
+    [bool]$SkipArchiveMailbox = $false,
     $OutputObject
 )
 
 $Period = '180'
 
-$Version = "v3.14"
+$Version = "v3.16"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -367,94 +369,126 @@ Disconnect-MgGraph
 
 # The Microsoft Exchange Reports do not contain In-Place Archive sizing information so we also need to connect to the Exchange Online module to
 # get this information
-Write-Output "[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities."
-Connect-ExchangeOnline -ShowBanner:$false
+
+if ($SkipArchiveMailbox -eq $true -And $SkipSharedMailbox -eq $true) {
+    # Do Nothing
+} else {
+    Write-Output "[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities."
+    Connect-ExchangeOnline -ShowBanner:$false
+}
+
 $ManualUserPrincipalName = $null 
 $ActionRequiredLogMessage = "[ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
 $ActionRequiredPromptMessage = "Enter the User Principal Name"
-Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing."
+
 
 
 $FirstInterval = 500
 $SkipInternval = $FirstInterval
 $ArchiveMailboxSizeGb = 0
 $LargeAmountofArchiveMailboxCount = 5000
-try {
-    
-    if ($AzureAdRequired){
-        $ArchiveMailboxes = @()    
-        foreach($AdGroupUser in $AzureAdGroupMembersByUserPrincipalName){
-              $ArchiveMailboxes += Get-ExoMailbox -Archive -Identity $AdGroupUser
-        }
-       
-    } else {
-        $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited
-    }
-  
 
-    $ArchiveMailboxesCount = @($ArchiveMailboxes).Count
-
-    $ArchiveMailboxesFolders = @()
-    # Process the first N number of Archive Mailboxes. Where N = $FirstInterval
-    $ArchiveMailboxesFirstInverval = $ArchiveMailboxes | Select-Object -First $FirstInterval
-    if ($ArchiveMailboxesCount -le $LargeAmountofArchiveMailboxCount) {
-        $ArchiveMailboxesFolders += $ArchiveMailboxesFirstInverval| Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
-
-    } else {
-        Write-Output "[INFO] Detected a large number of Archive Mailboxes. Implementing additional logic to account for Microsoft API performance limits. This may take some time."
-        Write-Output ""
-        Write-Output $ActionRequiredLogMessage
-        Write-Output ""
-        $ManualUserPrincipalName = Read-Host -Prompt $ActionRequiredPromptMessage
-        $ArchiveMailboxesFolders +=  Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesFirstInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock {Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize }     
-        Write-Output ""
-       
-    }
-    
-    # Process any remaining Archive Mailboxes at the pre-defined $FirstInterval
-    if ($ArchiveMailboxesCount -ge $FirstInterval){
-
-        while($ArchiveMailboxesCount -ge 0)
-        {   
-            $ArchiveMailboxesCount = $ArchiveMailboxesCount - $FirstInterval
-            $ArchiveMailboxesSecondaryInverval = $ArchiveMailboxes | Select-Object -Skip $SkipInternval -First $FirstInterval 
-
-            if ($ArchiveMailboxesCount -le $LargeAmountofArchiveMailboxCount) {
-                $ArchiveMailboxesFolders += $ArchiveMailboxesSecondaryInverval | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
-            } else {
-                $ArchiveMailboxesFolders += Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesSecondaryInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock { Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize }     
-                Write-Output ""
-            }
-            $SkipInternval = $SkipInternval + $FirstInterval
-        }
-
-    }
-    # Remove the Start-RobustCloudCommand log file if it exists
-    Remove-Item -Path "$systemTempFolder\archiveMailbox.log" -ErrorAction SilentlyContinue
-    
-    foreach($Folder in $ArchiveMailboxesFolders){
-        $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
-        $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+if ($SkipArchiveMailbox -eq $false) {
+    Write-Output "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing."
+    try {
         
-        $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+        if ($AzureAdRequired){
+            $ArchiveMailboxes = @()    
+            foreach($AdGroupUser in $AzureAdGroupMembersByUserPrincipalName){
 
-        $ArchiveMailboxSizeGb += $FolderSizeInGb
+                try {
+                    # $ArchiveMailboxes += Get-ExoMailbox -Archive -Identity $AdGroupUser
+                    $ArchiveMailboxes += Get-ExoMailbox -Archive -Identity $AdGroupUser -ErrorAction Stop
+                }
+                catch {
+                    # Write-Output "ERRRROR ERRRROR ERRRROR ERRRROR ERRRROR"
+                    $errorException = $_.Exception
+                    $errorMessage = $errorException.Message
+                    # Write-Output $errorMessage.Message
+                    # exit
+                    # Write-Output "asdlfkja;lfkajdsf;lkasj;lkadsjfa;lsdfjkads;lfkjadsf;ladskjfad;slfkjads;lfjkadsf;lakdsfja;ldskfjadsfak;sdlfakdslj;fjadsfads;f"
+                    if($errorMessage.Contains("couldn't be found")) {
+                    # User does not have an archive mailbox. Can ignore error.
+
+                    } else {
+                        Write-Output "[ERROR] There was an issue retrieving Archive Mailbox details for $AdGroupUser. ($errorMessage)"
+
+
+                    }
+                }
+                
+            }
+        
+        } else {
+            $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited
+        }
+    
+
+        $ArchiveMailboxesCount = @($ArchiveMailboxes).Count
+
+        $ArchiveMailboxesFolders = @()
+        # Process the first N number of Archive Mailboxes. Where N = $FirstInterval
+        $ArchiveMailboxesFirstInverval = $ArchiveMailboxes | Select-Object -First $FirstInterval
+        if ($ArchiveMailboxesCount -le $LargeAmountofArchiveMailboxCount) {
+            $ArchiveMailboxesFolders += $ArchiveMailboxesFirstInverval| Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
+
+        } else {
+            Write-Output "[INFO] Detected a large number of Archive Mailboxes. Implementing additional logic to account for Microsoft API performance limits. This may take some time."
+            Write-Output ""
+            Write-Output $ActionRequiredLogMessage
+            Write-Output ""
+            $ManualUserPrincipalName = Read-Host -Prompt $ActionRequiredPromptMessage
+            $ArchiveMailboxesFolders +=  Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesFirstInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock {Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize }     
+            Write-Output ""
+        
+        }
+        
+        # Process any remaining Archive Mailboxes at the pre-defined $FirstInterval
+        if ($ArchiveMailboxesCount -ge $FirstInterval){
+
+            while($ArchiveMailboxesCount -ge 0)
+            {   
+                $ArchiveMailboxesCount = $ArchiveMailboxesCount - $FirstInterval
+                $ArchiveMailboxesSecondaryInverval = $ArchiveMailboxes | Select-Object -Skip $SkipInternval -First $FirstInterval 
+
+                if ($ArchiveMailboxesCount -le $LargeAmountofArchiveMailboxCount) {
+                    $ArchiveMailboxesFolders += $ArchiveMailboxesSecondaryInverval | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize
+                } else {
+                    $ArchiveMailboxesFolders += Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesSecondaryInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock { Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive -Folderscope "Archive" | Select-Object name,FolderAndSubfolderSize }     
+                    Write-Output ""
+                }
+                $SkipInternval = $SkipInternval + $FirstInterval
+            }
+
+        }
+        # Remove the Start-RobustCloudCommand log file if it exists
+        Remove-Item -Path "$systemTempFolder\archiveMailbox.log" -ErrorAction SilentlyContinue
+        
+        foreach($Folder in $ArchiveMailboxesFolders){
+            $FolderSize = $Folder.FolderAndSubfolderSize.ToString().split("(") | Select-Object -Index 1 
+            $FolderSizeBytes = $FolderSize.split("bytes") | Select-Object -Index 0
+            
+            $FolderSizeInGb = [math]::Round(([int64]$FolderSizeBytes / 1GB), 3, [MidPointRounding]::AwayFromZero)
+
+            $ArchiveMailboxSizeGb += $FolderSizeInGb
+        }
+    }
+    catch {
+        $errorException = $_.Exception
+        $errorMessage = $errorException.Message
+        Write-Output "[ERROR] Unable to retrieve In-Place Archive sizing. $errorMessage "
     }
 }
-catch {
-    $errorException = $_.Exception
-    $errorMessage = $errorException.Message
-    Write-Output "[ERROR] Unable to retrieve In-Place Archive sizing. $errorMessage "
-}
 
-Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox sizing."
 # Reset First and Skip interval values
 $FirstInterval = 500
 $SkipInternval = $FirstInterval
 $SharedMailboxesSizeGb = 0
 $LargeAmountofSharedMailboxCount = 5000
-
 if ($SkipSharedMailbox -eq $false){
+    Write-Output "[INFO] Retrieving Exchange Mailbox Shared Mailbox sizing."
+
+
     try {
         # Process the first N number of Shared Mailboxes. Where N = $FirstInterval
         $SharedMailboxes = Get-ExoMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited
@@ -519,7 +553,7 @@ if ($SkipSharedMailbox -eq $false){
         Write-Output "[ERROR] Unable to retrieve Shared Mailbox sizing. $errorMessage"
     }
     } else {
-        Write-Output "[WARNING] Skipping Shared Mailbox calculation."
+        # Write-Output "[WARNING] Skipping Shared Mailbox calculation."
         $SharedMailboxesCount = 0
         $SharedMailboxesSizeGb = 0
 }
@@ -527,8 +561,14 @@ if ($SkipSharedMailbox -eq $false){
 $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
 $M365Sizing.Exchange.TotalSizeGB += $SharedMailboxesSizeGb
 
-Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
-Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
+if ($SkipArchiveMailbox -eq $true -And $SkipSharedMailbox -eq $true) {
+    # Do Nothing
+} else {
+    Write-Output "[INFO] Disconnecting from the Microsoft Exchange Online Module"
+    Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
+}
+
+
 
 Write-Output "[INFO] Calculating the forecasted total storage need for Rubrik."
 foreach($Section in $M365Sizing | Select-Object -ExpandProperty Keys){
