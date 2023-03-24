@@ -81,7 +81,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 4. The script will run and the results will be written to a html file in the directory in which it was run.
 
 ```
-.\RubrikMS365Sizing.txt
+.\RubrikMS365Sizing.html
 ```
 
 When 5,000 or more Shared Mailboxes or In-Place archives are detected, you will receive the following prompt:
