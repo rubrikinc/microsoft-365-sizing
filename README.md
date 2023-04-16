@@ -2,12 +2,10 @@
 
 [![Download zip](https://user-images.githubusercontent.com/8610203/145614905-a6d64f3a-adab-4c3f-9bf9-ffa4fdf6793f.png "Download zip")](https://github.com/rubrikinc/microsoft-365-sizing/archive/refs/heads/main.zip)
 
-
 ```
-Get-RubrikM365SizingInfo.ps1
-[INFO] Starting the Rubrik Microsoft 365 sizing script (v3.11).
+./Get-RubrikM365SizingInfo.ps1
+[INFO] Starting the Rubrik Microsoft 365 sizing script (v4.0).
 [INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' (if filtering results by Azure AD Group) permissions.
-[INFO] Looking up all users in the provided Azure AD Group.
 [INFO] Retrieving the Total Storage Consumed for ...
  - Exchange
  - SharePoint
@@ -17,24 +15,8 @@ Get-RubrikM365SizingInfo.ps1
  - SharePoint
  - OneDrive
 [INFO] Disconnecting from the Microsoft Graph API.
-
-ClientId              : xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-TenantId              : xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-CertificateThumbprint : 
-Scopes                : {Application.ReadWrite.All, AppRoleAssignment.ReadWrite.All, Group.Read.All, openid…}
-AuthType              : Delegated
-AuthProviderType      : InteractiveAuthenticationProvider
-CertificateName       : 
-Account               : xxx.yyyyy@zzzzzzzzzzz.com
-AppName               : Microsoft Graph PowerShell
-ContextScope          : CurrentUser
-Certificate           : 
-PSHostVersion         : 7.2.6
-ClientTimeout         : 00:05:00
-
 [INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities.
 [INFO] Retrieving all Exchange Mailbox In-Place Archive sizing.
-[INFO] Retrieving Exchange Mailbox Shared Mailbox sizing.
 [INFO] Disconnecting from the Microsoft Exchange Online Module
 [INFO] Calculating the forecasted total storage need for Rubrik.
 
@@ -45,7 +27,7 @@ M365 Sizing information has been written to /dev/Rubrik-M365-Sizing.html
 ## Requirements
 
 * `PowerShell >= 5.1` for PowerShell Gallery.
-* Microsoft 365 Global administrator credentials (Required to determine In-Place Archive and Shared Mailbox details)
+* Microsoft 365 Global administrator credentials (Required to determine In-Place Archive details)
 
 
 
@@ -84,7 +66,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\RubrikMS365Sizing.txt
 ```
 
-When 5,000 or more Shared Mailboxes or In-Place archives are detected, you will receive the following prompt:
+When 5,000 or In-Place archives are detected, you will receive the following prompt:
 
 ```
 [ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
@@ -102,11 +84,9 @@ To filter OneDrive and Exchange results to a specific subset of users in an Azur
 ## What information does the script access?
 
 The majority of the information collected is directly from the Microsoft 365 [Usage reports](https://docs.microsoft.com/en-us/microsoft-365/admin/activity-reports/activity-reports?view=o365-worldwide) that are found in the admin center.
-The benefit of this approach is that the information can be pulled in bulk and does not require a complete crawl of your Microsoft 365 subscription. 
+The benefit of this approach is that the information can be pulled in bulk and does not require a complete crawl of your Microsoft 365 subscription.
 
-The only downside of this approach is that the Usage reports do not contain any Shared Mailbox or In-Place archive information. To gather that information Rubrik will request a seperate set of permissions to pull statistics for each Shared Mailbox and In-Place archive in your environment. Depending on the size of you environment, this can take a significant amount of time.  
-
-
+The only downside of this approach is that the Usage reports do not contain any In-Place archive information. To gather that information Rubrik will request a separate set of permissions to pull statistics for each In-Place archive in your environment. Depending on the size of you environment, this can take a significant amount of time.  
 
 ## Example Output
 
