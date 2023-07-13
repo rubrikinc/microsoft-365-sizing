@@ -35,7 +35,7 @@ param (
 
 $Period = '180'
 
-$Version = "v4.0"
+$Version = "v4.1"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -230,7 +230,10 @@ else {
     throw "The 'ExchangeOnlineManagement' is required for this script. Run the follow command to install: Install-Module ExchangeOnlineManagement"
 }
 
+$AzureAdRequired = $PSBoundParameters.ContainsKey('AzureAdGroupName')
+
 if ($AzureAdRequired) {
+    
     # Validate the required 'Azure.Graph.Authentication' is installed
     # and provide a user friendly message when it's not.
     if (Get-Module -ListAvailable -Name Microsoft.Graph.Groups) {
