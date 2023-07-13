@@ -500,6 +500,8 @@ if ($SkipArchiveMailbox -eq $false) {
 
             $ArchiveMailboxSizeGb += $FolderSizeInGb
         }
+
+        $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
     }
     catch {
         $errorException = $_.Exception
@@ -507,8 +509,6 @@ if ($SkipArchiveMailbox -eq $false) {
         Write-Output "[ERROR] Unable to retrieve In-Place Archive sizing. $errorMessage "
     }
 }
-
-$M365Sizing.Exchange.TotalSizeGB += $SharedMailboxesSizeGb
 
 if ($SkipArchiveMailbox -eq $true) {
     # Do Nothing
