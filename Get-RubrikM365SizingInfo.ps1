@@ -175,8 +175,14 @@ function ProcessUsageReport {
         Default { 
             if ($Section -eq "Exchange") {
                 
-                $TotalUserMailbox = $ReportDetail | Where-Object { $_.'Recipient Type' -eq 'User' }
-                $TotalSharedMailbox = $ReportDetail | Where-Object { $_.'Recipient Type' -eq 'Shared' }
+                if ($AzureAdRequired) {
+                    $TotalUserMailbox = $ReportDetail | Where-Object { $_.'Recipient Type' -eq 'User' -and $_.$FilterByField -in $AzureAdGroupMembersByUserPrincipalName }
+                    $TotalSharedMailbox = $ReportDetail | Where-Object { $_.'Recipient Type' -eq 'Shared' -and $_.$FilterByField -in $AzureAdGroupMembersByUserPrincipalName }
+                }
+                else {
+                    $TotalUserMailbox = $ReportDetail | Where-Object { $_.'Recipient Type' -eq 'User' }
+                    $TotalSharedMailbox = $ReportDetail | Where-Object { $_.'Recipient Type' -eq 'Shared' }
+                }
 
                 if ($TotalSharedMailbox.Count -ge $TotalUserMailbox.Count) {
                     # Total number of Shared Mailboxes is > than User mailboxes so we need to
