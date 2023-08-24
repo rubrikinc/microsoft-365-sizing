@@ -466,7 +466,7 @@ if ($SkipArchiveMailbox -eq $false) {
         # Process the first N number of Archive Mailboxes. Where N = $FirstInterval
         $ArchiveMailboxesFirstInverval = $ArchiveMailboxes | Select-Object -First $FirstInterval
         if ($ArchiveMailboxesCount -le $LargeAmountofArchiveMailboxCount) {
-            $ArchiveMailboxesFolders += $ArchiveMailboxesFirstInverval | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name, FolderAndSubfolderSize
+            $ArchiveMailboxesFolders += $ArchiveMailboxesFirstInverval | Get-EXOMailboxFolderStatistics -Archive | Select-Object name, FolderAndSubfolderSize
 
         }
         else {
@@ -475,7 +475,7 @@ if ($SkipArchiveMailbox -eq $false) {
             Write-Output $ActionRequiredLogMessage
             Write-Output ""
             $ManualUserPrincipalName = Read-Host -Prompt $ActionRequiredPromptMessage
-            $ArchiveMailboxesFolders += Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesFirstInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock { Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive -Folderscope "Archive" | Select-Object name, FolderAndSubfolderSize }     
+            $ArchiveMailboxesFolders += Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesFirstInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock { Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive | Select-Object name, FolderAndSubfolderSize }     
             Write-Output ""
         
         }
@@ -488,10 +488,10 @@ if ($SkipArchiveMailbox -eq $false) {
                 $ArchiveMailboxesSecondaryInverval = $ArchiveMailboxes | Select-Object -Skip $SkipInternval -First $FirstInterval 
 
                 if ($ArchiveMailboxesCount -le $LargeAmountofArchiveMailboxCount) {
-                    $ArchiveMailboxesFolders += $ArchiveMailboxesSecondaryInverval | Get-EXOMailboxFolderStatistics -Archive -Folderscope "Archive" | Select-Object name, FolderAndSubfolderSize
+                    $ArchiveMailboxesFolders += $ArchiveMailboxesSecondaryInverval | Get-EXOMailboxFolderStatistics -Archive | Select-Object name, FolderAndSubfolderSize
                 }
                 else {
-                    $ArchiveMailboxesFolders += Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesSecondaryInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock { Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive -Folderscope "Archive" | Select-Object name, FolderAndSubfolderSize }     
+                    $ArchiveMailboxesFolders += Start-RobustCloudCommand -UserPrincipalName $ManualUserPrincipalName -IdentifyingProperty "DisplayName" -recipients $ArchiveMailboxesSecondaryInverval -logfile "$systemTempFolder\archiveMailbox.log" -ScriptBlock { Get-EXOMailboxFolderStatistics -Identity $input.UserPrincipalName -Archive | Select-Object name, FolderAndSubfolderSize }     
                     Write-Output ""
                 }
                 $SkipInternval = $SkipInternval + $FirstInterval
@@ -509,8 +509,12 @@ if ($SkipArchiveMailbox -eq $false) {
 
             $ArchiveMailboxSizeGb += $FolderSizeInGb
         }
+        # Divided by two because the listed folders contain Top of Information Store which shows overall size of all the folders in side the mailbox.
+        $ArchiveMailboxSizeGb = $ArchiveMailboxSizeGb / 2
 
         $M365Sizing.Exchange.TotalSizeGB += $ArchiveMailboxSizeGb
+        $M365Sizing.Exchange.SizePerUserGB = [math]::Round(($M365Sizing.Exchange.TotalSizeGB / $M365Sizing.Exchange.NumberOfUsers), 2)
+        
     }
     catch {
         $errorException = $_.Exception
