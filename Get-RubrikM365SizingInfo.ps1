@@ -29,13 +29,13 @@ param (
     [Parameter()]
     [String]$AzureAdGroupName,
     [Parameter()]
-    [bool]$SkipArchiveMailbox = $false,
+    [bool]$SkipArchiveMailbox = $True, # Temporary set to True as the default while API stablitity is addressed
     $OutputObject
 )
 
 $Period = '180'
 
-$Version = "v4.1"
+$Version = "v4.2"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
