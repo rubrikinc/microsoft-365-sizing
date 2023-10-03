@@ -86,8 +86,6 @@ To filter OneDrive and Exchange results to a specific subset of users in an Azur
 The majority of the information collected is directly from the Microsoft 365 [Usage reports](https://docs.microsoft.com/en-us/microsoft-365/admin/activity-reports/activity-reports?view=o365-worldwide) that are found in the admin center.
 The benefit of this approach is that the information can be pulled in bulk and does not require a complete crawl of your Microsoft 365 subscription.
 
-The only downside of this approach is that the Usage reports do not contain any In-Place archive information. To gather that information Rubrik will request a separate set of permissions to pull statistics for each In-Place archive in your environment. Depending on the size of you environment, this can take a significant amount of time.  
-
 ## Example Output
 
 ![image](https://user-images.githubusercontent.com/51362633/190453033-94379a84-8678-4592-9d9b-2b1dad96a521.png)
