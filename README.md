@@ -14,9 +14,10 @@
  - Exchange
  - SharePoint
  - OneDrive
+[INFO] Retrieving the File Counts for OneDrive and SharePoint ...
+ - SharePoint
+ - OneDrive
 [INFO] Disconnecting from the Microsoft Graph API.
-[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities.
-[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing.
 [INFO] Disconnecting from the Microsoft Exchange Online Module
 [INFO] Calculating the forecasted total storage need for Rubrik.
 
