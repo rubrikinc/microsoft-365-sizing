@@ -35,7 +35,7 @@ param (
 
 $Period = '180'
 
-$Version = "v4.3"
+$Version = "v4.4"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -217,6 +217,51 @@ function ProcessUsageReport {
     $M365Sizing.$($Section).SizePerUserGB = [math]::Round((($SummarizedData.Average) / 1GB), 2)
 }
 
+function Get-FileCountReport {
+    #Report Refresh Date	Site Type	Total	Active	Report Date	Report Period
+    param (
+        [Parameter(Mandatory)]
+        [string]$ReportCSV
+        # [Parameter(Mandatory)]
+        # [string]$ReportName,
+        # [Parameter(Mandatory)]
+        # [string]$Section
+    )
+
+    # OneDrive Report Format
+    # Report Refresh Date	Site Type	Total	Active	Report Date	Report Period
+    # 11/7/23	            All	        515096	1	    11/7/23	           180
+    # 11/7/23	            All	        515094	3	    11/6/23	           180
+    # 11/7/23	            All	        515094	0	    11/5/23	           180
+    # 11/7/23	            All	        515096	0	    11/4/23	           180
+
+    # SharePoint Report Format
+    # Report Refresh Date	Site Type	Total	Active	Report Date	Report Period
+    # 11/7/23	            All	        143	    2	    11/7/23	           180
+    # 11/7/23	            All	        143	    3	    11/6/23	           180
+    # 11/7/23	            All	        143	    0	    11/5/23	           180
+    # 11/7/23	            All	        143	    0	    11/4/23	           180
+
+    try {
+        # Import the CSV file
+        $ReportDetail = Import-Csv -Path $ReportCSV 
+
+        # Check if data is present
+        if ($ReportDetail.Length -eq 0) {
+            
+            Write-Error "The Microsoft API did not return any File count information." 
+        }
+
+        # Get the first object and its 'Total' property
+        return $ReportDetail[0].Total
+    }
+    catch {
+        # Catch the error and display an error message
+        Write-Error "An error occurred:" $_.Exception.Message  
+    }
+   
+}
+
 
 # Validate the required 'Microsoft.Graph.Reports' is installed
 # and provide a user friendly message when it's not.
@@ -324,6 +369,7 @@ $M365Sizing = [ordered]@{
         AverageGrowthPercentage      = 0
         OneYearStorageForecastInGB   = 0
         ThreeYearStorageForecastInGB = 0
+        TotalNumberOfFiles           = 0
     }
     SharePoint         = [ordered]@{
         NumberOfSites                = 0
@@ -332,6 +378,7 @@ $M365Sizing = [ordered]@{
         AverageGrowthPercentage      = 0
         OneYearStorageForecastInGB   = 0
         ThreeYearStorageForecastInGB = 0
+        TotalNumberOfFiles           = 0
     }
     Licensing          = [ordered]@{
         # Commented out for now, but we can get the number of licensed users if required (Not just activated).
@@ -392,6 +439,26 @@ foreach ($Section in $StorageUsageReports.Keys) {
     $M365Sizing.$($Section).AverageGrowthPercentage = [math]::Round($AverageGrowth, 2)
     Remove-Item -Path $ReportCSV
 }
+
+
+#endregion
+
+#region File Count Report
+$FileCountUsageReports = @{}
+$FileCountUsageReports.Add('SharePoint', 'getSharePointSiteUsageSiteCounts')
+$FileCountUsageReports.Add('OneDrive', 'getOneDriveUsageFileCounts')
+Write-Output "[INFO] Retrieving the File Counts for OneDrive and SharePoint ..."
+
+foreach ($Section in $FileCountUsageReports.Keys) {
+    
+    Write-Output " - $Section"
+    $ReportCSV = Get-MgReport -ReportName $FileCountUsageReports[$Section] -Period $Period
+    $FileCount = Get-FileCountReport -ReportCSV $ReportCSV
+    $M365Sizing.$($Section).TotalNumberOfFiles = $FileCount
+
+    Remove-Item -Path $ReportCSV
+}
+
 
 
 #endregion
@@ -1072,6 +1139,7 @@ $HTML_CODE = @"
                         <th>Average Growth Forecast (Yearly)</th>
                         <th>One Year Storage Forecast</th>
                         <th>Three Year Storage Forecast</th>
+                        <th>Number of Files</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1082,6 +1150,7 @@ $HTML_CODE = @"
                         <td>$($M365Sizing[1].AverageGrowthPercentage)%</td>
                         <td>$($M365Sizing[1].OneYearStorageForecastInGB) GB</td>
                         <td>$($M365Sizing[1].ThreeYearStorageForecastInGB) GB</td>
+                        <td>$($M365Sizing[1].TotalNumberOfFiles)</td>
                     </tr>
                 </tbody>
             </table>
@@ -1139,6 +1208,7 @@ $HTML_CODE = @"
                         <th>Average Growth Forecast (Yearly)</th>
                         <th>One Year Storage Forecast</th>
                         <th>Three Year Storage Forecast</th>
+                        <th>Number of Files</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1149,6 +1219,8 @@ $HTML_CODE = @"
                         <td>$($M365Sizing[2].AverageGrowthPercentage)%</td>
                         <td>$($M365Sizing[2].OneYearStorageForecastInGB) GB</td>
                         <td>$($M365Sizing[2].ThreeYearStorageForecastInGB) GB</td>
+                        <td>$($M365Sizing[2].TotalNumberOfFiles)</td>
+
                     </tr>
                 </tbody>
             </table>
