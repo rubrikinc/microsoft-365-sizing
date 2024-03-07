@@ -1,35 +1,7 @@
-# Microsoft 365 Sizing PowerShell Script
-
-[![Download zip](https://user-images.githubusercontent.com/8610203/145614905-a6d64f3a-adab-4c3f-9bf9-ffa4fdf6793f.png "Download zip")](https://github.com/rubrikinc/microsoft-365-sizing/archive/refs/heads/main.zip)
-
-```
-./Get-RubrikM365SizingInfo.ps1
-[INFO] Starting the Rubrik Microsoft 365 sizing script (v4.0).
-[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' (if filtering results by Azure AD Group) permissions.
-[INFO] Retrieving the Total Storage Consumed for ...
- - Exchange
- - SharePoint
- - OneDrive
-[INFO] Retrieving the Average Storage Growth Forecast for ...
- - Exchange
- - SharePoint
- - OneDrive
-[INFO] Retrieving the File Counts for OneDrive and SharePoint ...
- - SharePoint
- - OneDrive
-[INFO] Disconnecting from the Microsoft Graph API.
-[INFO] Disconnecting from the Microsoft Exchange Online Module
-[INFO] Calculating the forecasted total storage need for Rubrik.
-
-
-M365 Sizing information has been written to /dev/Rubrik-M365-Sizing.html
-```
-
 ## Requirements
 
 * `PowerShell >= 5.1` for PowerShell Gallery.
 * Microsoft 365 Global administrator credentials (Required to determine In-Place Archive details)
-
 
 
 ## Installation
@@ -67,25 +39,82 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\RubrikMS365Sizing.html
 ```
 
-When 5,000 or In-Place archives are detected, you will receive the following prompt:
+## Options
 
+If you want to run the script against a single AD Group, use the following:
 ```
-[ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
-Enter the User Principal Name: 
+./Get-RubrikM365SizingInfo.ps1 -ADGroup "RubrikEmployees"
 ```
 
-The "User Principal Name" corresponds with the account name you used to sign into Microsoft 365 during the Modern Authentication process.
-
-To filter OneDrive and Exchange results to a specific subset of users in an AzureAdGroup use the `-AzureAdGroupName` flag.
-
+The script will try to gather In Place Archive sizes for each mailbox. However, to do so, the script needs to query each mailbox user's information which can timeout for larger environments. If that's the case, you can skip gathering In Place Archives with the following:
 ```
-./Get-RubrikM365SizingInfo.ps1 -AzureAdGroupName "RubrikEmployees"
+./Get-RubrikM365SizingInfo.ps1 -SkipArchiveMailbox $true
 ```
+
+
 
 ## What information does the script access?
 
 The majority of the information collected is directly from the Microsoft 365 [Usage reports](https://docs.microsoft.com/en-us/microsoft-365/admin/activity-reports/activity-reports?view=o365-worldwide) that are found in the admin center.
-The benefit of this approach is that the information can be pulled in bulk and does not require a complete crawl of your Microsoft 365 subscription.
+
+
+
+# Microsoft 365 Sizing PowerShell Script
+
+
+```
+ ./Get-RubrikM365SizingInfo.ps1
+[INFO] Starting the Rubrik Microsoft 365 sizing script (v5.0).
+[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' permissions.
+[INFO] Retrieving usage info for ...
+ - Exchange
+ - Usage report for Exchange output to: .\getMailboxUsageDetail.csv
+[INFO] Retrieving usage info for ...
+ - OneDrive
+ - Usage report for OneDrive output to: .\getOneDriveUsageAccountDetail.csv
+[INFO] Retrieving usage info for ...
+ - SharePoint
+ - Usage report for SharePoint output to: .\getSharePointSiteUsageDetail.csv
+[INFO] Retrieving historical usage reports
+[INFO] Current usage data and historical reports may differ pending deletions
+[INFO] OneDrive usage:
+  - Current usage (calculated with per-user stats): 1043.92 GB
+  - Usage on 2024-03-05: 90.76 GB
+  - Usage on 2023-09-08: 976.86 GB
+  - Growth over 180 days: 67.06 GB
+  - Growth annualized per year: 135.98 GB, 13%
+[INFO] SharePoint usage:
+  - Current usage (calculated with per-user stats): 30.06 GB
+  - Usage on 2024-03-05: 30.06 GB
+  - Usage on 2023-09-08: 21.27 GB
+  - Growth over 180 days: 8.79 GB
+  - Growth annualized per year: 17.82 GB, 59%
+[INFO] Exchange usage:
+  - Current usage (calculated with per-user stats): 0.81 GB
+  - Usage on 2024-03-05: 0.32 GB
+  - Usage on 2023-09-08: 1.57 GB
+  - Growth over 180 days: -0.76 GB
+  - Growth annualized per year: -1.54 GB, -190%
+[NOTE] If the growth looks odd, try using a different period (parameter: -Period 7, 30, 90, 180) days
+[INFO] Calculating the forecasted total storage need for Rubrik.
+[INFO] Disconnecting from the Microsoft Graph API.
+Now gathering In Place Archive usage
+This may take awhile since stats need to be gathered per user
+Progress will be written as they are gathered
+[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities.
+[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing
+[INFO] Found 4 mailboxes with In Place Archives
+[0 / 4] Processing mailboxes ...
+[INFO] Finished gathering stats on mailboxes with In Place Archive
+[INFO] Total # of mailboxes with In Place Archive: 4
+[INFO] Total size of mailboxes with In Place Archive: 0.01 GB
+[INFO] Total # of items of mailboxes with In Place Archive: 74
+[INFO] Disconnecting from the Microsoft Exchange Online Module
+
+M365 Sizing information has been written to /home/Rubrik-M365-Sizing-2024-03-07.html
+
+```
+
 
 ## Example Output
 
