@@ -1,24 +1,36 @@
 <#
 .SYNOPSIS
-    Get-RubrikM365SizingInfo.ps1 returns statistics on number of accounts, sites and how much storage they are using in a Micosoft 365 Tenant
+    Get-RubrikM365SizingInfo.ps1 returns M365 usage information for a subscription.
 .DESCRIPTION
-    Get-RubrikM365SizingInfo.ps1 returns statistics on number of accounts, sites and how much storage they are using in a Micosoft 365 Tenant
-    In this script, Rubrik uses Microsoft Graph APIs to return data from the customer's M365 Tenant. Data is collected via the Graph API
-    and then downloaded to the customer's machine. This data is left behind and never sent to Rubrik or viewed by Rubrik.
+    Get-RubrikM365SizingInfo.ps1 returns M365 usage information for a subscprtion.
+    Data is gathered using the Microsoft Graph APIs and Exchange module.
+
+    The usage data should be similar to the metrics in the Admin Center under each
+    workload's "Usage Reports" data. There could be some discrepency between the
+    "Total Users" shown in the Usage Charts and what the script gathers because the
+    script uses the detailed user .CSV and summarizes that information.
+
+    The M365 Usage Reports do not contain information on Exchange In Place Archives.
+    By default, the script will try to gather this information by looping through
+    each user that has an In Place Archive and gathering that info directly. Unfortunately,
+    if there are a lot of users, this may time out the script. If that is the case,
+    you can use the flag to skip gathering in place archive data and try to provide
+    an estimate.
 
 .EXAMPLE
-    PS C:\> .\Get-RubrikM365SizingInfo.ps1 -Period 180
-    Will connect to customer's M365 Tenant. A browser page will open up linking to the customer's M365 Tenant authorization page. The
-    customer will need to provide authorization. The script will gather data for 180 days. Once this is done output will be written to
-    the current working directory as a file called RubrikM365Sizing.html.
-.INPUTS
-    Inputs (if any)
-.OUTPUTS
-    Rubrik-M365-Sizing.html.
+    PS C:\> .\Get-RubrikM365SizingInfo.ps1
+    Opens a browser window to authenticate to M365 Graph APIs and Microsoft Exchange
+    Module to pull usage information.
+
+    PS C:\> .\Get-RubrikM365SizingInfo.ps1 -SkipArchiveMailbox $true
+    Skip gathering In Place Archive mailboxes.
+
+    PS C:\> .\Get-RubrikM365SizingInfo.ps1 -ADGroup <ad_group_name>
+    Gather user info for only the AD Group specified.
 .NOTES
     Author:         Chris Lumnah
     Created Date:   6/17/2021
-    Updated: 1/28/24
+    Updated: 3/13/24
     By: Steven Tong
 #>
 
@@ -38,9 +50,10 @@ param (
 )
 
 $date = Get-Date
-$dateString = $date.ToString("yyyy-MM-dd_HHmm")
+$dateString = $date.ToString("yyyy-MM-dd")
+$outFilename = "./Rubrik-M365-Sizing-$dateString.html"
 
-$Version = "v5.0"
+$Version = "v5.2"
 Write-Output "[INFO] Starting the Rubrik Microsoft 365 sizing script ($Version)."
 
 # Provide OS agnostic temp folder path for raw reports
@@ -204,6 +217,17 @@ catch {
   $errorException = $_.Exception
   $errorMessage = $errorException.Message
   Write-Output "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
+}
+
+if ($SkipArchiveMailbox -eq $false) {
+  Write-Output "[INFO] Connecting to the Microsoft Exchange Online Module to gather per-mailbox In Place Archive stats."
+  try {
+    Connect-ExchangeOnline -ShowBanner:$false
+  } catch {
+    $errorException = $_.Exception
+    $errorMessage = $errorException.Message
+    Write-Output "[ERROR] Unable to Connect to the Microsoft Exchange PowerShell Module: $errorMessage"
+  }
 }
 
 if ($AzureAdRequired) {
@@ -400,8 +424,6 @@ else {
   Write-Output "Now gathering In Place Archive usage"
   Write-Output "This may take awhile since stats need to be gathered per user"
   Write-Output "Progress will be written as they are gathered"
-  Write-Output "[INFO] Switching to the Microsoft Exchange Online Module for more detailed reporting capabilities."
-  Connect-ExchangeOnline -ShowBanner:$false
   $ConnectionUserPrincipalName = $(Get-ConnectionInformation).UserPrincipalName
   # $ActionRequiredLogMessage = "[ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
   # $ActionRequiredPromptMessage = "Enter the User Principal Name"
@@ -423,15 +445,19 @@ else {
       Write-Output "[$CurrentMailboxNum / $ArchiveMailboxesCount] Processing mailboxes ..."
     }
     $CurrentUser = $ArchiveMailboxes[$CurrentMailboxNum].'User Principal Name'
-    $ArchiveMailboxStats = Get-EXOMailboxStatistics -Archive -Identity $CurrentUser
-    $MatchArchiveSize = $ArchiveMailboxStats.TotalItemSize -match '\(([^)]+) bytes\)'
-    $ArchiveSize = [long]($Matches[1] -replace ',', '')
-    $ArchiveStats = [PSCustomObject] @{
-      "UserPrincipalName" = $CurrentUser
-      "ArchiveSizeGB" = $ArchiveSize / 1GB
-      "ArchiveItems" = $ArchiveMailboxStats.ItemCount
+    try {
+      $ArchiveMailboxStats = Get-EXOMailboxStatistics -Archive -Identity $CurrentUser
+      $MatchArchiveSize = $ArchiveMailboxStats.TotalItemSize -match '\(([^)]+) bytes\)'
+      $ArchiveSize = [long]($Matches[1] -replace ',', '')
+      $ArchiveStats = [PSCustomObject] @{
+        "UserPrincipalName" = $CurrentUser
+        "ArchiveSizeGB" = $ArchiveSize / 1GB
+        "ArchiveItems" = $ArchiveMailboxStats.ItemCount
+      }
+      $ArchiveMailboxList += $ArchiveStats
+    } catch {
+      Write-Error "Error getting info for mailbox: $CurrentUser"
     }
-    $ArchiveMailboxList += $ArchiveStats
     $CurrentMailboxNum += 1
   } while ($CurrentMailboxNum -lt $ArchiveMailboxesCount)
   $ArchiveMeasurementSize = $ArchiveMailboxList | Measure-Object -Property 'ArchiveSizeGB' -Sum -Average
@@ -1417,7 +1443,7 @@ $HTML_CODE = @"
 #endregion
 
 # Remove any previously created files
-Remove-Item -Path .\Rubrik-M365-Sizing.html -ErrorAction SilentlyContinue
-Write-Output $HTML_CODE | Format-Table -AutoSize | Out-File -FilePath .\Rubrik-M365-Sizing.html -Append
+Remove-Item -Path $outFilename -ErrorAction SilentlyContinue
+Write-Output $HTML_CODE | Format-Table -AutoSize | Out-File -FilePath $outFilename -Append
 
-Write-Output "`n`nM365 Sizing information has been written to $((Get-ChildItem Rubrik-M365-Sizing.html).FullName)`n`n"
+Write-Host "`n`nM365 Sizing information has been written to $((Get-ChildItem $outFilename).FullName)`n`n" -foregroundcolor green
