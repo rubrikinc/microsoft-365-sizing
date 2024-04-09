@@ -1,7 +1,7 @@
 ## Requirements
 
 * `PowerShell >= 5.1` for PowerShell Gallery.
-* Microsoft 365 Global administrator credentials (Required to determine In-Place Archive details)
+* Microsoft user permissions to run this script: Global Reader and Reports Reader
 
 
 ## Installation
