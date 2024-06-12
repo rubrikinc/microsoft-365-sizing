@@ -33,7 +33,7 @@
 .NOTES
     Author:         Chris Lumnah
     Created Date:   6/17/2021
-    Updated: 4/7/24
+    Updated: 6/12/24
     By: Steven Tong
 #>
 
@@ -47,6 +47,9 @@ param (
     # Provide AD Group name if you only want to gather data for a specific AD Group
     [Parameter()]
     [String]$ADGroup,
+    # Provide AD Group name to exclude if you want to exclude it from sizing
+    [Parameter()]
+    [String]$ExcludeADGroup,
     # If gathering AD Group, CSV file to output AD Group membership info
     [Parameter()]
     [String]$ADGroupCSVFilename = './adgrouplist.csv',
@@ -60,14 +63,15 @@ param (
 
 $date = Get-Date
 $dateString = $date.ToString("yyyy-MM-dd")
+$dateStringHH = $date.ToString("yyyy-MM-dd_HHmm")
 
 # Filename to export the html report to
-$outFilename = "./Rubrik-M365-Sizing-$dateString.html"
+$outFilename = "./Rubrik-M365-Sizing-$dateStringHH.html"
 
 # Folder to export CSVs to
 $ExportFolder = '.'
 
-$Version = "6.0"
+$Version = "6.1"
 
 $ProgressPreference = 'SilentlyContinue'
 
@@ -216,7 +220,7 @@ if (Get-Module -ListAvailable -Name ExchangeOnlineManagement) {
   throw "The 'ExchangeOnlineManagement' module is required for this script. Run the follow command to install: Install-Module ExchangeOnlineManagement"
 }
 
-$AzureAdRequired = $PSBoundParameters.ContainsKey('ADGroup')
+$AzureAdRequired = $PSBoundParameters.ContainsKey('ADGroup') -or $PSBoundParameters.ContainsKey('ExcludeADGroup')
 
 if ($AzureAdRequired) {
   # Validate the required 'Azure.Graph.Authentication' is installed
@@ -327,7 +331,11 @@ $ExchangeUsageReportShared = $ExchangeUsageReport | Where-Object { $_.'Is Delete
   $_.'Recipient Type' -eq 'Shared'}
 
 if ($AzureAdRequired) {
-  Write-Host "Filtering user mailboxes by Azure AD Group: $ADGroup"
+  if ($ADGroup -ne '') {
+    Write-Host "Filtering user mailboxes by Azure AD Group: $ADGroup"
+  } else {
+
+  }
   $FilterByField = "User Principal Name"
   $ExchangeUsageReportUsers = $ExchangeUsageReportUsers | Where-Object { $_.$FilterByField -in $AzureAdGroupMembersByUserPrincipalName }
   # If we didn't get any usage for the Azure AD group users, it might be because the reports are masking User IDs
@@ -528,6 +536,8 @@ Disconnect-MgGraph
 
 if ($SkipArchiveMailbox -eq $true) {
   Write-Host "Skipping gathering In Place Archive usage" -foregroundcolor green
+  $ArchiveMailboxes = $ExchangeUsageReportUsers | Where-Object { $_.'Has Archive' -eq 'TRUE' }
+  $ArchiveMailboxesCount = $ArchiveMailboxes.Count
 } else {
   Write-Host "Now gathering In Place Archive usage" -foregroundcolor green
   Write-Host "This may take awhile since stats need to be gathered per user" -foregroundcolor green
@@ -591,7 +601,7 @@ if ($SkipArchiveMailbox -eq $false) {
   $ExchangeTotalItems = $ExchangeDetails.'Total Items' + $ArchiveMeasurementItems.Sum
   $ExchangeDetails.'Total Items' = $ExchangeTotalItems
 } else {
-  $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Archive Mailboxes' -Value 'Skipped'
+  $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Archive Mailboxes' -Value "Skipped ($ArchiveMailboxesCount)"
   $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Archive Storage Used' -Value '-'
   $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Archive Items' -Value '-'
 }
@@ -600,11 +610,11 @@ Write-Host "Calculating # of license needed:"
 Write-Host "Exchange user mailboxes: $($ExchangeDetails.'User Mailboxes')"
 Write-Host "Exchange shared mailboxes: $($ExchangeDetails.'Shared Mailboxes')"
 Write-Host "OneDrive chart accounts: $($OneDriveDetails.'Chart Accounts')"
-$UserLicensesRequired = $($ExchangeDetails.'User Mailboxes')
-if ($ExchangeDetails.'Shared Mailboxes' -gt $UserLicensesRequired) {
+[int]$UserLicensesRequired = $($ExchangeDetails.'User Mailboxes')
+if ([int]$ExchangeDetails.'Shared Mailboxes' -gt $UserLicensesRequired) {
   $UserLicensesRequired = $ExchangeDetails.'Shared Mailboxes'
 }
-if ($OneDriveDetails.'Chart Accounts' -gt $UserLicensesRequired) {
+if ([int]$OneDriveDetails.'Chart Accounts' -gt $UserLicensesRequired) {
   $UserLicensesRequired = $OneDriveDetails.'Chart Accounts'
 }
 Write-Host "# of licenses required: $UserLicensesRequired" -foregroundcolor green
@@ -1005,7 +1015,7 @@ $HTML_CODE = @"
                 </g>
             </svg>
         </div>
-        <div class="nav-bar-text">Microsoft 365 Sizing</div>
+        <div class="nav-bar-text">Microsoft 365 Sizing ($dateString)</div>
     </div>
     <div class="margin"></div>
 
@@ -1592,3 +1602,4 @@ Remove-Item -Path $outFilename -ErrorAction SilentlyContinue
 Write-Output $HTML_CODE | Format-Table -AutoSize | Out-File -FilePath $outFilename -Append
 
 Write-Host "`n`nM365 Sizing information has been written to $((Get-ChildItem $outFilename).FullName)`n`n" -foregroundcolor green
+Write-Host "Thank you for running this script. Please send the .html file to Rubrik." -foregroundcolor green
