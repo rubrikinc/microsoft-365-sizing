@@ -33,7 +33,7 @@
 .NOTES
     Author:         Chris Lumnah
     Created Date:   6/17/2021
-    Updated: 6/12/24
+    Updated: 6/21/24
     By: Steven Tong
 #>
 
@@ -71,7 +71,7 @@ $outFilename = "./Rubrik-M365-Sizing-$dateStringHH.html"
 # Folder to export CSVs to
 $ExportFolder = '.'
 
-$Version = "6.1"
+$Version = "6.2"
 
 $ProgressPreference = 'SilentlyContinue'
 
@@ -614,8 +614,8 @@ Write-Host "OneDrive chart accounts: $($OneDriveDetails.'Chart Accounts')"
 if ([int]$ExchangeDetails.'Shared Mailboxes' -gt $UserLicensesRequired) {
   $UserLicensesRequired = $ExchangeDetails.'Shared Mailboxes'
 }
-if ([int]$OneDriveDetails.'Chart Accounts' -gt $UserLicensesRequired) {
-  $UserLicensesRequired = $OneDriveDetails.'Chart Accounts'
+if ([int]$OneDriveDetails.'Accounts' -gt $UserLicensesRequired) {
+  $UserLicensesRequired = $OneDriveDetails.'Accounts'
 }
 Write-Host "# of licenses required: $UserLicensesRequired" -foregroundcolor green
 
@@ -1045,7 +1045,7 @@ $HTML_CODE = @"
                     </svg>
                 </div>
                 <div class="card-header-text">
-                    Exchange Online $ADGroup
+                    Exchange Online (AD Group: $ADGroup)
                 </div>
             </div>
 
@@ -1098,7 +1098,7 @@ $HTML_CODE = @"
                     </svg>
                 </div>
                 <div class="card-header-text">
-                    OneDrive $ADGroup
+                    OneDrive (AD Group: $ADGroup)
                 </div>
             </div>
 
