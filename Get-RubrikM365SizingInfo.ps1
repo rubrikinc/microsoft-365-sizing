@@ -33,7 +33,7 @@
 .NOTES
     Author:         Chris Lumnah
     Created Date:   6/17/2021
-    Updated: 6/21/24
+    Updated: 7/9/24
     By: Steven Tong
 #>
 
@@ -71,7 +71,7 @@ $outFilename = "./Rubrik-M365-Sizing-$dateStringHH.html"
 # Folder to export CSVs to
 $ExportFolder = '.'
 
-$Version = "6.2"
+$Version = "6.3"
 
 $ProgressPreference = 'SilentlyContinue'
 
@@ -259,7 +259,7 @@ if ($AzureAdRequired) {
   if ($AzureAdGroupDetails.Count -eq 0) {
     throw "The Azure AD Group '$ADGroup' does not exist. Exiting script."
   }
-  $AzureAdGroupMembersById = Get-MgGroupMember -GroupId $AzureAdGroupDetails.Id -All
+  $AzureAdGroupMembersById = Get-MgGroupTransitiveMember -GroupId $AzureAdGroupDetails.Id -All
   if ($EnableDebug) {
     Write-Host "[DEBUG] Azure AD Group Members Size: $($AzureAdGroupMembersById.Count)"
   }
