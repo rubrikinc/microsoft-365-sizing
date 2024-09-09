@@ -16,6 +16,13 @@
     if there are a lot of users, this may time out the script. If that is the case,
     you can use the flag to skip gathering in place archive data and try to provide
     an estimate.
+    
+    The M365 Usage Reports do not contain information on Exchange Recoverable Items Folder.
+    By default, the script will try to gather this information by looping through
+    every user and gathering that info directly. Unfortunately,
+    if there are a lot of users, this may time out the script. If that is the case,
+    you can use the flag to skip gathering Recoverable Items data and try to provide
+    an estimate.
 
 .EXAMPLE
     PS C:\> .\Get-RubrikM365SizingInfo.ps1
@@ -27,6 +34,9 @@
 
     PS C:\> .\Get-RubrikM365SizingInfo.ps1 -SkipArchiveMailbox $true
     Skip gathering In Place Archive mailboxes.
+    
+    PS C:\> .\Get-RubrikM365SizingInfo.ps1 SkipRecoverableItems $true
+    Skip gathering Recoverable Items hierarchy.
 
     PS C:\> .\Get-RubrikM365SizingInfo.ps1 -ADGroup <ad_group_name>
     Gather user info for only the AD Group specified.
@@ -35,6 +45,8 @@
     Created Date:   6/17/2021
     Updated: 7/9/24
     By: Steven Tong
+    Updated: 26/08/24
+    By: Sameer Arora
 #>
 
 [CmdletBinding()]
@@ -56,6 +68,9 @@ param (
     # Whether or not to skip gathering archived mailboxes, which can timeout
     [Parameter()]
     [bool]$SkipArchiveMailbox = $false,
+    # Whether or not to skip gathering Recoverable Items fodler items, which can timeout
+    [Parameter()]
+    [bool]$SkipRecoverableItems = $true,
     # Number of days to get historical stats for: 7, 30, 90, 180
     [Parameter()]
     [Int]$Period = 180
@@ -198,6 +213,75 @@ function Solve-License {
   return $licenseRequired
 }
 
+# function to get folder items, size, and name for the Recoverable Items folder in both Primary and In-Place mailbox for a single user.
+function Get-RecoverableItemsInfo {
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = "Enter the user mailbox to be checked.")]
+        [string]$Mailbox,
+        [Parameter(Mandatory = $true, HelpMessage = "Enter whether to include In-Place archive mailbox Recoverable Items folder or not.")]
+        [bool]$IncludeArchiveMailbox,
+        [Parameter()]
+        [bool]$EnableDebug = $false
+        )
+    
+    # Aggreagate folder statistics for the supported Recoverable Items folders 
+    $RIFItemsStatistics = [PSCustomObject] @{
+        "UserPrincipalName" = $Mailbox
+        "RIFSize" = 0
+        "RIFItems" = 0
+    }
+
+    # Get folder statistics for the supported Recoverable Items folders
+    $recoverableItemsSpecialFolders = @(
+        "/Deletions",
+        "/Purges",
+        "/Versions",
+        "/DiscoveryHolds"
+    )
+
+    try {
+        $primaryStats = Get-MailboxFolderStatistics -Identity $Mailbox -FolderScope RecoverableItems | Where-Object {
+            $recoverableItemsSpecialFolders -contains $_.FolderPath
+        }
+    } catch {
+        Write-Error "Error retrieving folder statistics. $_"
+    }
+
+    if ($primaryStats.Count -eq 0) {
+        Write-Output "No Recoverable Items folders found for primary mailbox $Mailbox."
+    }
+
+    if ($IncludeArchiveMailbox) {
+        try {
+            $inPlaceStats = Get-MailboxFolderStatistics -Identity $Mailbox -FolderScope RecoverableItems -Archive | Where-Object {
+                $recoverableItemsSpecialFolders -contains $_.FolderPath
+            }
+        } catch {
+            Write-Error "Error retrieving folder statistics. $_"
+        }
+        
+        if ($inPlaceStats.Count -eq 0) {
+            Write-Output "No Recoverable Items folders found for In-Place mailbox $Mailbox."
+        }
+    }
+
+    # Format and display the results
+    $folderStats = $primaryStats + $inPlaceStats
+    foreach ($stats in $folderStats) {
+        $sizeInBytes = $stats.FolderSize -match '\(([^)]+) bytes\)'
+        $sizeInBytes = [long]($Matches[1] -replace ',', '')
+        $RIFItemsStatistics.RIFSize += $sizeInBytes 
+        if ($EnableDebug) {
+            Write-Host "folder "$($stats.FolderPath)" size found $sizeInBytes , cummulative $RIFItemsStatistics"
+        }
+    }
+    $totalItems = $folderStats | Measure-Object -Property 'ItemsInFolder' -Sum
+    $RIFItemsStatistics.RIFItems += $totalItems.sum
+    if ($EnableDebug) {
+        Write-Output "total items found "$($totalItems.sum)" , cummulative $RIFItemsStatistics"
+    }
+    return $RIFItemsStatistics
+}
 
 # Validate that Period (days) for historical reports is valid
 # Must be: 7, 30, 90, or 180
@@ -241,17 +325,17 @@ catch {
   Write-Host "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
 }
 
-if ($SkipArchiveMailbox -eq $false) {
-  Write-Host "Connecting to the Microsoft Exchange Online Module to gather per-mailbox In Place Archive stats."
-  try {
-    Connect-ExchangeOnline -ShowBanner:$false
-  } catch {
-    $errorException = $_.Exception
-    $errorMessage = $errorException.Message
-    Write-Host "[ERROR] Unable to Connect to the Microsoft Exchange PowerShell Module: $errorMessage"
+if ($SkipArchiveMailbox -eq $false -or $SkipRecoverableItems -eq $false) {
+    Write-Host "Connecting to the Microsoft Exchange Online Module to gather per-mailbox In Place Archive stats."
+    try {
+      Connect-ExchangeOnline -ShowBanner:$false
+    } catch {
+      $errorException = $_.Exception
+      $errorMessage = $errorException.Message
+      Write-Host "[ERROR] Unable to Connect to the Microsoft Exchange PowerShell Module: $errorMessage"
+    }
   }
-}
-
+  
 # If AD Group is provided, get the AD Group membership info
 if ($AzureAdRequired) {
   Write-Host "Looking up AD Group users in: $ADGroup" -foregroundcolor green
@@ -330,6 +414,8 @@ $ExchangeUsageReportUsers = $ExchangeUsageReport | Where-Object { $_.'Is Deleted
 $ExchangeUsageReportShared = $ExchangeUsageReport | Where-Object { $_.'Is Deleted' -eq 'FALSE' -and
   $_.'Recipient Type' -eq 'Shared'}
 
+$ExchangeActiveUsers = $ExchangeUsageReportUsers + $ExchangeUsageReportShared
+
 if ($AzureAdRequired) {
   if ($ADGroup -ne '') {
     Write-Host "Filtering user mailboxes by Azure AD Group: $ADGroup"
@@ -362,11 +448,11 @@ $sharedMailboxStorageSumDisplay = [math]::Round($sharedMailboxStorageSum.Sum / $
 $sharedMailboxItems = $ExchangeUsageReportShared | Measure-Object -Property 'Item Count' -Sum
 
 Write-Host "Total # of active user mailboxes - from usage report: $($ExchangeUsageReportUsers.count)" -foregroundcolor green
-Write-Host "Active users storage used (not including in-place archve): $userMailboxStorageSumDisplay $capacityDisplay" -foregroundcolor green
-Write-Host "Active users item count (not including in-place archve): $($userMailboxItems.sum)" -foregroundcolor green
+Write-Host "Active users storage used (not including in-place archve, Recoverable Items Folder): $userMailboxStorageSumDisplay $capacityDisplay" -foregroundcolor green
+Write-Host "Active users item count (not including in-place archve, Recoverable Items Folder): $($userMailboxItems.sum)" -foregroundcolor green
 Write-Host "Total # of active shared mailboxes - from usage report: $($ExchangeUsageReportShared.count)" -foregroundcolor green
 Write-Host "Shared mailboxes storage used: $sharedMailboxStorageSumDisplay $capacityDisplay" -foregroundcolor green
-Write-Host "Shared mailboxes item count (not including in-place archve): $($sharedMailboxItems.sum)" -foregroundcolor green
+Write-Host "Shared mailboxes item count (not including in-place archve, Recoverable Items Folder): $($sharedMailboxItems.sum)" -foregroundcolor green
 Write-Host ""
 
 Write-Host "Getting historical Exchange storage growth" -foregroundcolor green
@@ -534,10 +620,11 @@ Disconnect-MgGraph
 # The Microsoft Exchange Reports do not contain In-Place Archive sizing information.DESCRIPTION
 # We need to connect to the Exchange Online module to get this information
 
+$ArchiveMailboxes = $ExchangeUsageReportUsers | Where-Object { $_.'Has Archive' -eq 'TRUE' }
+$ArchiveMailboxesCount = $ArchiveMailboxes.Count
+
 if ($SkipArchiveMailbox -eq $true) {
   Write-Host "Skipping gathering In Place Archive usage" -foregroundcolor green
-  $ArchiveMailboxes = $ExchangeUsageReportUsers | Where-Object { $_.'Has Archive' -eq 'TRUE' }
-  $ArchiveMailboxesCount = $ArchiveMailboxes.Count
 } else {
   Write-Host "Now gathering In Place Archive usage" -foregroundcolor green
   Write-Host "This may take awhile since stats need to be gathered per user" -foregroundcolor green
@@ -554,8 +641,6 @@ if ($SkipArchiveMailbox -eq $true) {
   Write-Host "[INFO] Retrieving all Exchange Mailbox In-Place Archive sizing"
   # Get a list of all users with In Place Archive mailboxes in the tenant
   # $ArchiveMailboxes = Get-ExoMailbox -Archive -ResultSize Unlimited
-  $ArchiveMailboxes = $ExchangeUsageReportUsers | Where-Object { $_.'Has Archive' -eq 'TRUE' }
-  $ArchiveMailboxesCount = $ArchiveMailboxes.Count
   $ArchiveMailboxList = @()
   $CurrentMailboxNum = 0
   Write-Host "Found $ArchiveMailboxesCount mailboxes with In Place Archives" -foregroundcolor green
@@ -587,9 +672,6 @@ if ($SkipArchiveMailbox -eq $true) {
   Write-Host "Total # of mailboxes with In Place Archive: $ArchiveMailboxesCount" -foregroundcolor green
   Write-Host "Total size of mailboxes with In Place Archive: $TotalArchiveSize $capacityDisplay" -foregroundcolor green
   Write-Host "Total # of items of mailboxes with In Place Archive: $TotalArchiveItems" -foregroundcolor green
-  Write-Host "Disconnecting from the Microsoft Exchange Online Module"
-  Write-Host ""
-  Disconnect-ExchangeOnline -Confirm:$false -InformationAction Ignore -ErrorAction SilentlyContinue
 }
 
 if ($SkipArchiveMailbox -eq $false) {
@@ -606,6 +688,91 @@ if ($SkipArchiveMailbox -eq $false) {
   $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Archive Items' -Value '-'
 }
 
+# The Microsoft Exchange Reports do not contain Recoverable Items sizing information.DESCRIPTION
+# We need to connect to the Exchange Online module to get this information
+
+# function to get folder items, size, and name for the Recoverable Items folder in both Primary and In-Place mailbox for passed users.
+function Get-RIFMailboxStats {
+    param (
+        [Parameter(Mandatory = $true)]
+        [array]$ExchangeUsers,
+        
+        [Parameter(Mandatory = $true, HelpMessage = "Enter whether to include In-Place archive mailbox Recoverable Items folder or not.")]
+        [bool]$IncludeArchiveMailbox
+    )
+
+    $RIFMailboxList = @()
+    $CurrentMailboxNum = 0
+    $ActiveMailboxesCount = $ExchangeUsers.count
+    
+    Write-Host "Found $ActiveMailboxesCount mailboxes with Recoverable Items" -ForegroundColor Green
+
+    do {
+        if (($CurrentMailboxNum % 10) -eq 0) {
+            Write-Host "[$CurrentMailboxNum / $ActiveMailboxesCount] Processing mailboxes ..."
+        }
+        $CurrentUser = $ExchangeUsers[$CurrentMailboxNum].'User Principal Name'
+        try {
+            $RIFStats = Get-RecoverableItemsInfo -Mailbox $CurrentUser -IncludeArchiveMailbox $IncludeArchiveMailbox
+            $RIFMailboxList += $RIFStats
+        } catch {
+            Write-Error "Error getting info for mailbox: $CurrentUser"
+        }
+        $CurrentMailboxNum += 1
+    } while ($CurrentMailboxNum -lt $ActiveMailboxesCount)
+
+    return $RIFMailboxList
+}
+
+# Example usage:
+# $ExchangeActiveUsers = [Array of users]
+# $ActiveMailboxesCount = $ExchangeActiveUsers.Count
+# $RIFMailboxList = Append-RIFMailboxList -ExchangeActiveUsers $ExchangeActiveUsers -ActiveMailboxesCount $ActiveMailboxesCount
+if ($SkipRecoverableItems -eq $true) {
+    Write-Host "Skipping gathering Recoverable Items usage" -foregroundcolor green
+    $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Recoverable Items' -Value "Skipped"
+    $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Recoverable Items Used' -Value '-'
+    $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Recoverable Items Count' -Value '-'
+} else {
+    Write-Host "Now gathering Recoverable Items usage" -foregroundcolor green
+    Write-Host "This may take awhile since stats need to be gathered per user" -foregroundcolor green
+    Write-Host "Progress will be written as they are gathered" -foregroundcolor green
+    Write-Host "If this keeps timing out, run script with SkipRecoverableItems $true option" -foregroundcolor green
+    $ConnectionUserPrincipalName = $(Get-ConnectionInformation).UserPrincipalName
+    # $ActionRequiredLogMessage = "[ACTION REQUIRED] In order to periodically refresh the connection to Microsoft, we need the User Principal Name used during the authentication process."
+    # $ActionRequiredPromptMessage = "Enter the User Principal Name"
+    $FirstInterval = 500
+    $SkipInternval = $FirstInterval
+    $ArchiveMailboxSizeGb = 0
+    $LargeAmountofArchiveMailboxCount = 5000
+    $FilterByField = 'User Principal Name'
+    Write-Host "[INFO] Retrieving all Exchange Mailbox Recoverable Items sizing"
+    
+    # Get a list of all users with Recoverable Items shared/non-shared mailboxes in the tenant
+    $NonArchiveMailboxes = $ExchangeActiveUsers | Where-Object { $_.'Has Archive' -eq 'FALSE' }
+    $ArchiveMailboxes = $ExchangeActiveUsers | Where-Object { $_.'Has Archive' -eq 'TRUE' }
+
+    $RIFMailboxList = Get-RIFMailboxStats -ExchangeUsers $NonArchiveMailboxes -IncludeArchiveMailbox 0
+    $RIFMailboxList += Get-RIFMailboxStats -ExchangeUsers $ArchiveMailboxes -IncludeArchiveMailbox 1
+    
+    $RIFMailboxSize = $RIFMailboxList | Measure-Object -Property 'RIFSize' -Sum -Average
+    $RIFMailboxItems = $RIFMailboxList | Measure-Object -Property 'RIFItems' -Sum -Average
+    $TotalRIFSize = [math]::Round($($RIFMailboxSize.Sum / $capacityMetric), 2)
+    $TotalRIFItems = $RIFMailboxItems.Sum
+    Write-Host "Finished gathering stats on mailboxes with Recoverable Items" -foregroundcolor green
+    Write-Host "Total # of mailboxes with Recoverable Items: $ActiveMailboxesCount" -foregroundcolor green
+    Write-Host "Total size of mailboxes with Recoverable Items: $TotalRIFSize $capacityDisplay" -foregroundcolor green
+    Write-Host "Total # of items of mailboxes with Recoverable Items: $TotalRIFItems" -foregroundcolor green
+    
+    $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Recoverable Items' -Value $ActiveMailboxesCount
+    $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Recoverable Items Used' -Value $TotalRIFSize
+    $ExchangeDetails | Add-Member -MemberType NoteProperty -Name 'Recoverable Items Count' -Value $TotalRIFItems
+    $ExchangeTotalStorage = $ExchangeDetails.'Total Storage Used' + $TotalRIFSize
+    $ExchangeDetails.'Total Storage Used' = $ExchangeTotalStorage
+    $ExchangeTotalItems = $ExchangeDetails.'Total Items' + $TotalRIFItems
+    $ExchangeDetails.'Total Items' = $ExchangeTotalItems
+}
+    
 Write-Host "Calculating # of license needed:"
 Write-Host "Exchange user mailboxes: $($ExchangeDetails.'User Mailboxes')"
 Write-Host "Exchange shared mailboxes: $($ExchangeDetails.'Shared Mailboxes')"
@@ -1059,6 +1226,8 @@ $HTML_CODE = @"
                         <th># of User Mailboxes</th>
                         <th># of Shared Mailboxes</th>
                         <th># of User Mailboxes w/Archive</th>
+                        <th>Total Recoverable Items Size (GB)</th>
+                        <th>Total Recoverable Items # of Items</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1070,6 +1239,8 @@ $HTML_CODE = @"
                         <td>$($ExchangeDetails.'User Mailboxes')</td>
                         <td>$($ExchangeDetails.'Shared Mailboxes')</td>
                         <td>$($ExchangeDetails.'Archive Mailboxes')</td>
+                        <td>$($ExchangeDetails.'Recoverable Items Used')</td>
+                        <td>$($ExchangeDetails.'Recoverable Items Count')</td>
                     </tr>
                 </tbody>
             </table>
