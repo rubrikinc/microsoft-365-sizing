@@ -51,6 +51,11 @@ The script will try to gather In Place Archive sizes for each mailbox. However, 
 ./Get-RubrikM365SizingInfo.ps1 -SkipArchiveMailbox $true
 ```
 
+The script will try to gather stats for the Recoverable Items folder. This can also take awhile and timeout in larger environments. You can skip this by using:
+```
+./Get-RubrikM365SizingInfo.ps1 -SkipRecoverableItems $true
+```
+
 The script will calculate annual growth rates for 10%, 20%, and 30% annual growth rates. You can change the 30% to a custom value such as 40% by using the following flag:
 ```
 ./Get-RubrikM365SizingInfo.ps1 -AnnualGrowth 40
