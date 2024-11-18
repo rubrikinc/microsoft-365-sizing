@@ -3,6 +3,18 @@
 * `PowerShell >= 5.1` for PowerShell Gallery.
 * Microsoft user permissions to run this script: Global Reader and Reports Reader
 
+* There are two ways users can authenticate to Exchange Online:
+* 1. App access:
+*     Follow https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps to create an app        registration to be used for this script.
+*     The API permissions required are: 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' from Microsoft Graph and `Exchange.ManageAsApp` from Office 365 Exchange Online.
+*     To run this script successfully, you will need:
+	    a. Tenant ID.
+	    b. Client ID (App ID) of the app created above.
+	    c. Client Secret created on the app above.
+
+* 2. User access:
+*     Login through the admin user account when prompted on the browser.
+
 
 ## Installation
 

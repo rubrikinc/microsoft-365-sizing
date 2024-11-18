@@ -283,6 +283,31 @@ function Get-RecoverableItemsInfo {
     return $RIFItemsStatistics
 }
 
+function Get-AccessToken {
+    param (
+        [string]$ClientId,
+        [string]$ClientSecret,
+        [string]$TenantId,
+        [string]$Scope = "https://outlook.office365.com/.default"
+    )
+
+    $body = @{
+        client_id     = $ClientId
+        scope         = $Scope
+        client_secret = $ClientSecret
+        grant_type    = "client_credentials"
+    }
+
+    $url = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
+    try {
+        $response = Invoke-RestMethod -Method Post -Uri $url -ContentType "application/x-www-form-urlencoded" -Body $body
+        return $response.access_token
+    } catch {
+        Write-Error "Failed to get access token: $_"
+        return $null
+    }
+}
+
 # Validate that Period (days) for historical reports is valid
 # Must be: 7, 30, 90, or 180
 $PeriodValues = @(7, 30, 90, 180)
@@ -315,26 +340,68 @@ if ($AzureAdRequired) {
   }
 }
 
-Write-Host "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' permissions."
-try {
-  Connect-MgGraph -Scopes "Reports.Read.All", "User.Read.All", "Group.Read.All"  | Out-Null
-}
-catch {
-  $errorException = $_.Exception
-  $errorMessage = $errorException.Message
-  Write-Host "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
-}
+Write-Host "Choose one of the following options for accessing Exchange Online"
+$useApp = Read-Host -Prompt "1 for using app credentials, 2 for using user access"
 
-if ($SkipArchiveMailbox -eq $false -or $SkipRecoverableItems -eq $false) {
-    Write-Host "Connecting to the Microsoft Exchange Online Module to gather per-mailbox In Place Archive stats."
+if ($useApp -eq "1") {
+    # Prompt the user to enter the Client ID, Client Secret, and Tenant ID
+    Write-Host "Enter app info to authenticate for Graph Access"
+    $tenantId = Read-Host -Prompt "Enter your Tenant ID"
+    $clientId = Read-Host -Prompt "Enter your Azure AD Application Client ID"
+    $ClientSecretCredential = Get-Credential -Credential $clientId
+
+    Write-Host "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' permissions."
     try {
-      Connect-ExchangeOnline -ShowBanner:$false
-    } catch {
-      $errorException = $_.Exception
-      $errorMessage = $errorException.Message
-      Write-Host "[ERROR] Unable to Connect to the Microsoft Exchange PowerShell Module: $errorMessage"
+        Connect-MgGraph -TenantId $tenantId -ClientSecretCredential $clientSecretCredential
     }
-  }
+    catch {
+        $errorException = $_.Exception
+        $errorMessage = $errorException.Message
+        Write-Host "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
+        return
+    }
+
+    if ($SkipArchiveMailbox -eq $false -or $SkipRecoverableItems -eq $false) {
+        Write-Host "Connecting to the Microsoft Exchange Online Module to gather per-mailbox In Place Archive stats."
+        try {
+            $clientSecretSecure = Read-Host -Prompt "Password for user $clientId" -AsSecureString
+            $clientSecret = ConvertFrom-SecureString -SecureString $clientSecretSecure -AsPlainText
+            $token = Get-AccessToken -clientId $clientId -clientSecret $clientSecret -tenantId $tenantId
+            Connect-ExchangeOnline -AccessToken $token -Organization $tenantId
+        } catch {
+            $errorException = $_.Exception
+            $errorMessage = $errorException.Message
+            Write-Host "[ERROR] Unable to Connect to the Microsoft Exchange PowerShell Module: $errorMessage"
+            return
+        }
+    }
+} elseif ($useApp -eq "2") {
+    Write-Host "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' permissions."
+    try {
+        Connect-MgGraph -Scopes "Reports.Read.All", "User.Read.All", "Group.Read.All"  | Out-Null
+    }
+    catch {
+        $errorException = $_.Exception
+        $errorMessage = $errorException.Message
+        Write-Host "[ERROR] Unable to Connect to the Microsoft Graph PowerShell Module: $errorMessage"
+        return
+    }
+
+    if ($SkipArchiveMailbox -eq $false -or $SkipRecoverableItems -eq $false) {
+        Write-Host "Connecting to the Microsoft Exchange Online Module to gather per-mailbox In Place Archive stats."
+        try {
+            Connect-ExchangeOnline -ShowBanner:$false
+        } catch {
+            $errorException = $_.Exception
+            $errorMessage = $errorException.Message
+            Write-Host "[ERROR] Unable to Connect to the Microsoft Exchange PowerShell Module: $errorMessage"
+            return
+        }
+    }
+} else {
+    Write-Host "Invalid option, please choose either 1 or 2."
+    return
+}
   
 # If AD Group is provided, get the AD Group membership info
 if ($AzureAdRequired) {
