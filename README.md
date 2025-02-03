@@ -53,6 +53,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 ## Options
 
+If you want to run the script with app access, use the following:
+```
+./Get-RubrikM365SizingInfo.ps1 -UseAppAccess $true
+```
+
 If you want to run the script against a single AD Group, use the following:
 ```
 ./Get-RubrikM365SizingInfo.ps1 -ADGroup "RubrikEmployees"

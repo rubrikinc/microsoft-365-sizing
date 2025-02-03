@@ -29,6 +29,11 @@
     Opens a browser window to authenticate to M365 Graph APIs and Microsoft Exchange
     Module to pull usage information.
 
+    PS C:\> .\Get-RubrikM365SizingInfo.ps1 -UseAppAccess $true
+    Prompts the user to enter tenant ID, app client ID and app client secret to 
+    authenticate to M365 Graph APIs and Microsoft Exchange Module to pull usage 
+    information.
+
     PS C:\> .\Get-RubrikM365SizingInfo.ps1 -AnnualGrowth 35
     Calculate sizing to include a 35% annual growth rate
 
@@ -73,7 +78,13 @@ param (
     [bool]$SkipRecoverableItems = $true,
     # Number of days to get historical stats for: 7, 30, 90, 180
     [Parameter()]
-    [Int]$Period = 180
+    [Int]$Period = 180,
+    # UseAppAccess indicates that the user wants to access Exchange through App access 
+    # instead of delegated user access.
+    [Parameter(HelpMessage="Set this to true when you want to access Exchange through 
+    App access instead of delegated user access.")]
+    [String]$UseAppAccess = $false
+
 )
 
 $date = Get-Date
@@ -340,17 +351,15 @@ if ($AzureAdRequired) {
   }
 }
 
-Write-Host "Choose one of the following options for accessing Exchange Online"
-$useApp = Read-Host -Prompt "1 for using app credentials, 2 for using user access"
-
-if ($useApp -eq "1") {
+if ($UseAppAccess -eq $true) {
     # Prompt the user to enter the Client ID, Client Secret, and Tenant ID
-    Write-Host "Enter app info to authenticate for Graph Access"
+    Write-Host "You have chosen to authenticate through App access for accessing Exchange Online."
+    Write-Host "[INFO] Please enter app info to authenticate for Graph Access that has the following permissions: "
+    Write-Host "'Reports.Read.All', 'User.Read.All', and 'Group.Read.All'."
     $tenantId = Read-Host -Prompt "Enter your Tenant ID"
     $clientId = Read-Host -Prompt "Enter your Azure AD Application Client ID"
     $ClientSecretCredential = Get-Credential -Credential $clientId
 
-    Write-Host "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' permissions."
     try {
         Connect-MgGraph -TenantId $tenantId -ClientSecretCredential $clientSecretCredential
     }
@@ -375,8 +384,10 @@ if ($useApp -eq "1") {
             return
         }
     }
-} elseif ($useApp -eq "2") {
-    Write-Host "[INFO] Connecting to the Microsoft Graph API using 'Reports.Read.All', 'User.Read.All', and 'Group.Read.All' permissions."
+} else {
+    Write-Host "You have chosen to authenticate through delegate user access for accessing Exchange Online."
+    Write-Host "[INFO] Please authenticate through an user with the following permissions:"
+    Write-Host "'Reports.Read.All', 'User.Read.All', and 'Group.Read.All'."
     try {
         Connect-MgGraph -Scopes "Reports.Read.All", "User.Read.All", "Group.Read.All"  | Out-Null
     }
@@ -398,9 +409,6 @@ if ($useApp -eq "1") {
             return
         }
     }
-} else {
-    Write-Host "Invalid option, please choose either 1 or 2."
-    return
 }
   
 # If AD Group is provided, get the AD Group membership info
