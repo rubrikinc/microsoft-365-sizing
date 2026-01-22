@@ -55,6 +55,8 @@
     By: Steven Tong
     Updated: 26/08/24
     By: Sameer Arora
+    Updated: 22/01/2026
+    By: Tim Stark - https://github.com/SuperStark
 #>
 
 [CmdletBinding()]
@@ -736,7 +738,12 @@ if ($SkipArchiveMailbox -eq $true) {
   $ArchiveMailboxList = @()
   $CurrentMailboxNum = 0
   Write-Host "Found $ArchiveMailboxesCount mailboxes with In Place Archives" -foregroundcolor green
-  do {
+  
+  if ($ArchiveMailboxesCount -eq 0) {
+    Write-Host "No archive mailboxes to process, skipping..." -foregroundcolor yellow
+  }
+  
+  while ($CurrentMailboxNum -lt $ArchiveMailboxesCount) {
     if ( ($CurrentMailboxNum % 10) -eq 0 ) {
       Write-Host "[$CurrentMailboxNum / $ArchiveMailboxesCount] Processing mailboxes ..."
     }
@@ -755,7 +762,8 @@ if ($SkipArchiveMailbox -eq $true) {
       Write-Error "Error getting info for mailbox: $CurrentUser"
     }
     $CurrentMailboxNum += 1
-  } while ($CurrentMailboxNum -lt $ArchiveMailboxesCount)
+  }
+  
   $ArchiveMeasurementSize = $ArchiveMailboxList | Measure-Object -Property 'ArchiveSize' -Sum -Average
   $ArchiveMeasurementItems = $ArchiveMailboxList | Measure-Object -Property 'ArchiveItems' -Sum -Average
   $TotalArchiveSize = [math]::Round($($ArchiveMeasurementSize.Sum / $capacityMetric), 2)
@@ -1322,7 +1330,7 @@ $HTML_CODE = @"
                         <td>$(if ($ExchangeDetails.'Archive Mailboxes' -like 'Skipped*') { 'Skipped' } else { $ExchangeDetails.'Archive Mailboxes' })</td>
                         <td>$(if ($ExchangeDetails.'Archive Mailboxes' -like 'Skipped*') { 'Skipped' } else { [math]::round($ExchangeDetails.'Archive Storage Used' / 1GB, 2) })</td>
                         <td>$(if ($ExchangeDetails.'Archive Mailboxes' -like 'Skipped*') { 'Skipped' } else { $ExchangeDetails.'Archive Items' })</td>
-                        <td>$(if ($ExchangeDetails.'Archive Mailboxes' -like 'Skipped*') { 'Skipped' } else { [math]::round($ExchangeDetails.'Archive Storage Used' / 1GB / $ExchangeDetails.'Archive Mailboxes', 2) })</td>
+                        <td>$(if ($ExchangeDetails.'Archive Mailboxes' -like 'Skipped*') { 'Skipped' } elseif ($ExchangeDetails.'Archive Mailboxes' -eq 0) { '0' } else { [math]::round($ExchangeDetails.'Archive Storage Used' / 1GB / $ExchangeDetails.'Archive Mailboxes', 2) })</td>
                     </tr>
                     <tr>
                         <td>Recoverable Items</td>
